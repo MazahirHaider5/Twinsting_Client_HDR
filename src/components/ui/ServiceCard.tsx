@@ -30,7 +30,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
         <div className="flex items-center gap-2 text-sm sm:text-base">
           <IoPricetagOutline />
           <p className="mx-1 truncate">
-            Starts from: <span className="font-bold text-gray-900">${pricing.starter.price}</span>
+            Starts from: <span className="font-bold text-gray-900">${pricing?.starter?.price ?? 'N/A'}</span>
           </p>
         </div>
       </div>

@@ -74,7 +74,16 @@ const HomePage = () => {
           </div>
           <section className="grid grid-cols-2 gap-6 md:gap-8 lg:grid-cols-4">
             {allServices.map((service) => (
-              <ServiceCard key={service._id} service={service} />
+              <div key={service._id}>
+                <h2>{service.title}</h2>
+                {service.pricing && service.pricing.starter && (
+                  <div>
+                    <h3>{service.pricing.starter.name}</h3>
+                    <p>{service.pricing.starter.description}</p>
+                    <p>Price: {service.pricing.starter.price}</p>
+                  </div>
+                )}
+              </div>
             ))}
           </section>
         </div>

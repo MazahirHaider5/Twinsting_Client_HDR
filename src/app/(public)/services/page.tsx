@@ -97,13 +97,13 @@ const Services = () => {
         <p className="text-center text-2xl">Fetching...</p>
       ) : (
         <section className="grid grid-cols-2 gap-6 md:gap-8 lg:grid-cols-4">
-          {/* {allServices?.length > 0 ? (
+          {allServices?.length > 0 ? (
             allServices?.map((service) => (
               <ServicesCards key={service._id} service={service} onDelete={handleDeleteService} />
             ))
           ) : (
             <p className="text-center text-2xl font-semibold">No services found</p>
-          )} */}
+          )}
         </section>
       )}
     </div>

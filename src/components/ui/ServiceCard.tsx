@@ -16,7 +16,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
   return (
     <div className="space-y-4 rounded-xl border border-gray-300 transition-all duration-300 hover:border-gray-400 hover:shadow-md">
       {/* Responsive Image */}
-      <Image alt="service" src={serviceImage} width={350} height={300} className="h-50 w-100 rounded-t-lg" />
+      <Image alt="service" src={serviceImage} width={350} height={300} className="h-50 w-full rounded-t-lg" />
 
       {/* Title with Truncation */}
       <p className="min-h-12 truncate px-4 text-lg font-semibold sm:text-xl">{title}</p>

@@ -32,8 +32,8 @@ export interface Media {
 }
 
 export interface Order {
-  orderId: string;
-  quantity: number;
+  id: string;
+  amount: number;
   status: string;
   // Add other relevant properties
 }

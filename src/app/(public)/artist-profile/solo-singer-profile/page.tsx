@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 import Reviews from "@/components/main/artists/Reviews";
 import ArtistCard from "@/components/ui/ArtistCard";
-import ServiceCard from "@/components/ui/ServiceCard";
 import { artists, servicesData } from "@/components/main/data";
 
 
@@ -140,13 +139,13 @@ const SoloSingerProfile = () => {
             <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
             {servicesData.slice(0, 4).map((service) => (
                 <div key={service.id} className="flex justify-center">
-                  <ServiceCard service={{
+                  {/* <ServiceCard service={{
                     ...service,
                     pricing: { starter: { price: Number(service.price) } }, // Convert to number
                     _id: String(service.id), // Convert to string if necessary
                     title: service.name, // Ensure this is set correctly
                     // Add any other required properties here
-                  }} />
+                  }} /> */}
                 </div>
               ))}
             </section>

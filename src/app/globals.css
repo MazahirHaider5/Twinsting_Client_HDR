@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+body {
+  background-color: oklch(0.985 0.002 247.839);
+  color: oklch(0.278 0.033 256.848);
+  font-family: Inter, Arial, Helvetica, sans-serif, "system-ui";
+}
+
+@layer utilities {
+  .gradient {
+    @apply bg-gradient-to-br from-[#F5A048] via-[#EB6470] to-[#E32379];
+  }
+  .gradient-text {
+    @apply bg-gradient-to-br from-[#F5A048] via-[#EB6470] to-[#E32379] bg-clip-text text-transparent;
+  }
+}
+
+.gradient-bg {
+  background: linear-gradient(90deg, #f5af48, #ff4e75, #e32379);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  height: 4px;  /* Set height for horizontal scrollbar */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media screen and (min-width: 1920px) and (max-width: 2560px) and (-webkit-min-device-pixel-ratio: 1.5) {
+  body {
+    zoom: 0.85;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    font-size: 0.9rem;
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "AuthPage": {
+    "loginMain": "Welcome Back!",
+    "loginTitle": "Login with your Email",
+    "signupMain": "Create your account",
+    "signupTitle": "Start Registeration",
+    "email": "Email",
+    "password": "Password",
+    "rememberMe": "Stay logged in",
+    "forgotPassword": "Forgot Password?",
+    "loginButton": "Login",
+    "register": "Register", 
+    "google": "Continue with Google",
+    "apple": "Continue with Apple ID",
+    "facebook": "Continue with Facebook",
+    "dontHaveAccount": "Don't have an account?",
+    "loginWith": "Or Login with",
+    "registerButton": "Create an Account",
+    "alreadyHaveAccount": "Already have an account?",
+    "signup": "Sign Up",
+    "fullName": "Full Name",
+    "emailPlaceholder": "Enter your email",
+    "passwordPlaceholder": "Enter your password",
+    "confirmPassword": "Confirm Password"
+  },
+  "HomePage": {
+    "topTodayServices": "Top Today Services",
+    "mostPopularServices": "Most Popular Services",
+    "browseByServiceCategories": "Browse by Service Categories",
+    "browseByServiceSubheading": "Get Professional Services from 23,345+ Sellers",
+    "trendingServices": "Trending Services",
+    "topRatedArtists": "Top Rated Artists",
+    "showAll": "Show All",
+    "startsFrom": "Starts from:",
+    "delivery": "Delivery",
+    "viewProfile": "View Profile",
+    "artistsByCategory": "Artists by Category",
+    "viewAllCategories": "View All Categories"
+  }
+}

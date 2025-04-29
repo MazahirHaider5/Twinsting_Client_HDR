@@ -1,0 +1,39 @@
+{
+  "AuthPage": {
+    "loginMain": "Bentornato!",
+    "loginTitle": "Accedi con la tua Email",
+    "signupMain": "Crea il tuo account",
+    "signupTitle": "Inizia la registrazione",
+    "email": "Email",
+    "password": "Password",
+    "rememberMe": "Rimani connesso",
+    "forgotPassword": "Password dimenticata?",
+    "loginButton": "Accedi",
+    "google": "Continua con Google",
+    "apple": "Continua con Apple ID",
+    "facebook": "Continua con Facebook",
+    "dontHaveAccount": "Non hai un account?",
+    "loginWith": "Oppure accedi con",
+    "registerButton": "Crea un account",
+    "alreadyHaveAccount": "Hai già un account?",
+    "signup": "Registrati",
+    "fullName": "Nome e Cognome",
+    "emailPlaceholder": "Inserisci la tua email",
+    "passwordPlaceholder": "Inserisci la tua password",
+    "confirmPassword": "Conferma Password"
+  },
+  "HomePage": {
+    "topTodayServices": "Servizi migliori di oggi",
+    "mostPopularServices": "Servizi più popolari",
+    "browseByServiceCategories": "Sfoglia per categorie di servizi",
+    "browseByServiceSubheading": "Ottieni servizi professionali da oltre 23.345 venditori",
+    "trendingServices": "Servizi di tendenza",
+    "topRatedArtists": "Artisti più votati",
+    "showAll": "Mostra tutto",
+    "startsFrom": "A partire da:",
+    "delivery": "Consegna",
+    "viewProfile": "Visualizza profilo",
+    "artistsByCategory": "Artisti per categoria",
+    "viewAllCategories": "Visualizza tutte le categorie"
+  }
+}

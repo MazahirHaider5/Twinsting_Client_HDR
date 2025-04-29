@@ -1,10 +1,11 @@
 import Image from "next/image";
 import React from "react";
-import { artists, services } from "@/components/main/data";
+import { artists, services, servicesData } from "@/components/main/data";
 import { useTranslations } from "next-intl";
 import { FaArrowRightLong } from "react-icons/fa6";
 import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import ArtistCard from "@/components/ui/ArtistCard";
+import ServiceCard from "@/components/ui/ServiceCard";
 
 const CompanyHomepage = () => {
   const t = useTranslations("HomePage");
@@ -115,11 +116,53 @@ const CompanyHomepage = () => {
             <FaArrowRight className="size-8 cursor-pointer rounded-full bg-gray-200 p-2 text-gray-600 hover:bg-gray-300 hover:text-gray-900" />
           </span>
         </div>
-        {/* <section className="grid grid-cols-2 gap-6 md:gap-8 lg:grid-cols-4"> */}
-          {/* {servicesData.map((service) => (
-            // <ServiceCard key={service.id} {...service} />
+        <section className="grid grid-cols-2 gap-6 md:gap-8 lg:grid-cols-4">
+          {servicesData.map((service) => (
+            <ServiceCard
+              key={service.id} // Add the key prop here
+              service={{
+                _id: String(service.id),
+                artist_id: "default-artist-id", // fallback if not present
+                title: service.name,
+                category: "default-category",
+                subcategory: "default-subcategory",
+                searchTags: [],
+                description: "",
+                media: {
+                  photos: [],
+                  videos: [],
+                  _id: ""
+                },
+                status: "active",
+                orders: [],
+                reviews: [],
+                pricing: {
+                  starter: {
+                    name: "Starter Plan",
+                    description: "Basic service package",
+                    price: Number(service.price),
+                    _id: "starter-plan-id"
+                  },
+                  standard: {
+                    name: "Standard Plan",
+                    description: "Standard service package",
+                    price: Number(service.price) + 50,
+                    _id: "standard-plan-id"
+                  },
+                  advance: {
+                    name: "Advance Plan",
+                    description: "Premium service package",
+                    price: Number(service.price) + 100,
+                    _id: "advance-plan-id"
+                  }
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                __v: 0
+              }}
+            />
           ))}
-        </section> */}
+        </section>
       </div>
 
       {/* TOP RATED ARTISTS  */}

@@ -6,8 +6,7 @@ import { Star } from "lucide-react";
 import Reviews from "@/components/main/artists/Reviews";
 import ArtistCard from "@/components/ui/ArtistCard";
 import { artists, servicesData } from "@/components/main/data";
-
-
+import ServiceCard from "@/components/ui/ServiceCard";
 
 const thumbnailImages = [
   "/images/solo-singer2.png",
@@ -20,7 +19,7 @@ const thumbnailImages = [
 
 const SoloSingerProfile = () => {
   // const t = useTranslations("HomePage");
-   
+
   return (
     <section className="flex flex-row p-4">
       {/* Left side */}
@@ -109,15 +108,13 @@ const SoloSingerProfile = () => {
         </div>
         <div className="mt-8 flex flex-col">
           <h2 className="mb-4 text-xl font-semibold">Reviews</h2>
-          <Reviews/>
-          
+          <Reviews />
+
           {/* Related Artists Section */}
           <div className="mt-10 rounded-xl bg-white p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-semibold">Related Artists</h2>
-              <button className="text-gray-600 hover:text-gray-900">
-                Show All
-              </button>
+              <button className="text-gray-600 hover:text-gray-900">Show All</button>
             </div>
             <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
               {artists.slice(0, 4).map((artist) => (
@@ -130,32 +127,61 @@ const SoloSingerProfile = () => {
 
           {/* Top Services Section */}
           <div className="mt-10 rounded-xl bg-white p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-semibold">Top Services</h2>
-              <button className="text-gray-600 hover:text-gray-900">
-                Show All
-              </button>
+              <button className="text-gray-600 hover:text-gray-900">Show All</button>
             </div>
             <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
-            {servicesData.slice(0, 4).map((service) => (
+              {servicesData.slice(0, 4).map((service) => (
                 <div key={service.id} className="flex justify-center">
-                  {/* <ServiceCard service={{
-                    ...service,
-                    pricing: { starter: { price: Number(service.price) } }, // Convert to number
-                    _id: String(service.id), // Convert to string if necessary
-                    title: service.name, // Ensure this is set correctly
-                    // Add any other required properties here
-                  }} /> */}
+                  <ServiceCard
+                    service={{
+                      _id: String(service.id),
+                      artist_id: "default-artist-id", // fallback if not present
+                      title: service.name,
+                      category: "default-category",
+                      subcategory: "default-subcategory",
+                      searchTags: [],
+                      description: "",
+                      media: {
+                        photos: [],
+                        videos: [],
+                        _id: ""
+                      },
+                      status: "active",
+                      orders: [],
+                      reviews: [],
+                      pricing: {
+                        starter: {
+                          name: "Starter Plan",
+                          description: "Basic service package",
+                          price: Number(service.price),
+                          _id: "starter-plan-id"
+                        },
+                        standard: {
+                          name: "Standard Plan",
+                          description: "Standard service package",
+                          price: Number(service.price) + 50,
+                          _id: "standard-plan-id"
+                        },
+                        advance: {
+                          name: "Advance Plan",
+                          description: "Premium service package",
+                          price: Number(service.price) + 100,
+                          _id: "advance-plan-id"
+                        }
+                      },
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      __v: 0
+                    }}
+                  />
                 </div>
               ))}
             </section>
           </div>
         </div>
-
-        
-        
       </div>
-      
 
       {/* Right side */}
       <div className="sticky top-4 m-10 h-fit w-[30%] rounded-lg bg-gray-100 p-6 shadow-lg">

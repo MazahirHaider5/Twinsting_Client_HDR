@@ -11,6 +11,8 @@ interface ServiceCardProps {
 const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
   const { media, title, pricing } = service;
 
+
+  
   const serviceImage = media.photos.length > 0 ? media.photos[0] : "/images/default-service-image.png"; // fallback if no photo
 
   return (

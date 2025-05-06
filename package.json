@@ -19,6 +19,7 @@
     "axios": "^1.8.4",
     "daisyui": "^5.0.6",
     "date-fns": "^4.1.0",
+    "emoji-picker-react": "^4.12.2",
     "formik": "^2.4.6",
     "lightningcss": "^1.29.3",
     "lucide-react": "^0.484.0",

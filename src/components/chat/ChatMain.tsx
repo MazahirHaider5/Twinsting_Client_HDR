@@ -4,18 +4,17 @@ import { CiSearch } from "react-icons/ci";
 import { BsCheck2All, BsThreeDotsVertical } from "react-icons/bs";
 import Image from "next/image";
 import { LuCircleDollarSign } from "react-icons/lu";
-import { FaBold, FaItalic, FaLink, FaSmile } from "react-icons/fa";
 import { IoIosArrowBack } from "react-icons/io";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import io, { Socket } from "socket.io-client";
 import apiClient from "@/lib/interceptor";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+import MessageInputBox from "./MessageInputBox";
 
-// API base URL - should be in your env file in a real app
 const API_BASE_URL = "http://localhost:5000";
 
-// Define interfaces for our data types
 interface User {
   _id: string;
   name?: string;
@@ -38,18 +37,21 @@ interface ContractDetails {
   service: string;
   isAccepted: boolean;
 }
+
 interface Reciever {
   _id: string;
   email: string;
   profilePicture: string;
   name: string;
 }
+
 interface Sender {
   _id: string;
   email: string;
   profilePicture: string;
   name: string;
 }
+
 interface Conversation {
   _id: string;
   participants: User[];
@@ -60,18 +62,17 @@ interface Conversation {
   sender?: Sender;
 }
 
-// Group messages by date
 interface MessagesByDate {
   [date: string]: Message[];
 }
 
-// Socket connection
 let socket: Socket | null = null;
 
 export default function ChatApp() {
   const currentUser = useSelector((state: RootState) => state.user);
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  // State variables
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesByDate, setMessagesByDate] = useState<MessagesByDate>({});
@@ -82,21 +83,18 @@ export default function ChatApp() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize socket connection
   useEffect(() => {
-    // Initialize socket
     socket = io(API_BASE_URL);
-
-    // Socket event listeners
     socket.on("connect", () => {
       console.log("Connected to socket server");
     });
 
     socket.on("receiveMessage", (message: Message) => {
+      // Skip if the message is from the current user (already added in handleSendMessage)
+      if (message.sender === currentUser._id) return;
+
       if (activeConversation && message.conversationId === activeConversation._id) {
         setMessages((prevMessages) => [...prevMessages, message]);
-
-        // Also update messagesByDate
         setMessagesByDate((prev) => {
           const dateKey = getMessageDateKey(new Date(message.createdAt));
           return {
@@ -106,7 +104,6 @@ export default function ChatApp() {
         });
       }
 
-      // Update conversation list to reflect new message
       setConversations((prevConversations) => {
         return prevConversations.map((conv) => {
           if (conv._id === message.conversationId) {
@@ -121,7 +118,6 @@ export default function ChatApp() {
       });
     });
 
-    // Cleanup on unmount
     return () => {
       if (socket) {
         socket.disconnect();
@@ -129,15 +125,12 @@ export default function ChatApp() {
     };
   }, [activeConversation, currentUser._id]);
 
-  // Fetch conversations on component mount
   useEffect(() => {
     const fetchConversations = async () => {
       try {
         const response = await apiClient.get(`/conversation/getAllUserConversations/${currentUser._id}`);
         if (response.data.success) {
           setConversations(response.data.data.conversations);
-          // console.log("THis is Reciever info", conversations.map((c) => c.receiver))
-          // console.log("THis is Sender info", conversations.map((c) => c.sender))
           setLoading(false);
         }
       } catch (error) {
@@ -149,7 +142,19 @@ export default function ChatApp() {
     fetchConversations();
   }, [currentUser._id]);
 
-  // Fetch messages when a conversation is selected
+  useEffect(() => {
+    const conversationId = searchParams.get("conversationId");
+    if (conversationId && conversations.length > 0 && !activeConversation) {
+      const selectedConversation = conversations.find((conv) => conv._id === conversationId);
+      if (selectedConversation) {
+        setActiveConversation(selectedConversation);
+        setActiveChat(true);
+      } else {
+        console.error("Conversation not found for ID:", conversationId);
+      }
+    }
+  }, [searchParams, conversations, activeConversation]);
+
   useEffect(() => {
     const fetchMessages = async () => {
       if (!activeConversation) return;
@@ -159,7 +164,6 @@ export default function ChatApp() {
         if (response.data.success) {
           setMessages(response.data.data);
 
-          // Group messages by date
           const groupedMessages: MessagesByDate = {};
           response.data.data.forEach((msg: Message) => {
             const dateKey = getMessageDateKey(new Date(msg.createdAt));
@@ -170,7 +174,6 @@ export default function ChatApp() {
           });
           setMessagesByDate(groupedMessages);
 
-          // Mark messages as read
           await markMessagesAsRead();
         }
       } catch (error) {
@@ -186,7 +189,6 @@ export default function ChatApp() {
           userId: currentUser._id
         });
 
-        // Update conversations to reflect read messages
         setConversations((prevConversations) =>
           prevConversations.map((conv) => (conv._id === activeConversation._id ? { ...conv, unreadCount: 0 } : conv))
         );
@@ -200,12 +202,10 @@ export default function ChatApp() {
     }
   }, [activeConversation, currentUser._id]);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Get a date key for grouping messages
   const getMessageDateKey = (date: Date): string => {
     const today = new Date();
     const yesterday = new Date();
@@ -220,7 +220,6 @@ export default function ChatApp() {
     }
   };
 
-  // Handle sending a message
   const handleSendMessage = async () => {
     if (!messageText.trim() || !activeConversation) return;
 
@@ -231,21 +230,16 @@ export default function ChatApp() {
     };
 
     try {
-      // Send message to API
       const response = await apiClient.post(`/message/sendMessage`, messageData);
       const newMessage = response.data.data;
 
-      // Add the new message to our messages list with the timestamp from the server
       setMessages((prevMessages) => [...prevMessages, newMessage]);
-
-      // Update messagesByDate
       const dateKey = getMessageDateKey(new Date(newMessage.createdAt));
       setMessagesByDate((prev) => ({
         ...prev,
         [dateKey]: [...(prev[dateKey] || []), newMessage]
       }));
 
-      // Update the conversation list to reflect the new message
       setConversations((prevConversations) => {
         return prevConversations.map((conv) => {
           if (conv._id === activeConversation._id) {
@@ -258,26 +252,21 @@ export default function ChatApp() {
         });
       });
 
-      // Emit message via socket
       socket?.emit("sendMessage", newMessage);
-
-      // Clear input
       setMessageText("");
     } catch (error) {
       console.error("Error sending message:", error);
     }
   };
 
-  // Handle selecting a conversation
   const handleSelectConversation = (conversation: Conversation) => {
     setActiveConversation(conversation);
     setActiveChat(true);
+    router.replace("/chat", undefined);
   };
 
-  // Format timestamp to display time
   const formatMessageTime = (timestamp: string): string => {
     if (!timestamp) return "";
-
     try {
       const date = new Date(timestamp);
       if (isNaN(date.getTime())) return "";
@@ -288,13 +277,11 @@ export default function ChatApp() {
     }
   };
 
-  // Get the other participant in the conversation
   const getOtherParticipant = (conversation: Conversation | null): User | null => {
     if (!conversation || !conversation.participants) return null;
     return conversation.participants.find((p) => p._id !== currentUser._id) || conversation.participants[0];
   };
 
-  // Filter conversations based on search term
   const filteredConversations = conversations.filter((conv) => {
     const otherUser = getOtherParticipant(conv);
     return (
@@ -304,20 +291,18 @@ export default function ChatApp() {
     );
   });
 
-  // Get sorted date keys for message groups
   const getSortedDateKeys = (): string[] => {
     const keys = Object.keys(messagesByDate);
-    const dateOrder: { [key: string]: number } = { TODAY: 1, YESTERDAY: 0 }; // TODAY should be later
-
+    const dateOrder: { [key: string]: number } = { TODAY: 1, YESTERDAY: 0 };
     return keys.sort((a, b) => {
       if (a in dateOrder && b in dateOrder) {
-        return dateOrder[a] - dateOrder[b]; // keep as is
+        return dateOrder[a] - dateOrder[b];
       } else if (a in dateOrder) {
-        return 1; // put TODAY/YESTERDAY later
+        return 1;
       } else if (b in dateOrder) {
         return -1;
       } else {
-        return new Date(a).getTime() - new Date(b).getTime(); // sort older first, newer later
+        return new Date(a).getTime() - new Date(b).getTime();
       }
     });
   };
@@ -325,12 +310,12 @@ export default function ChatApp() {
   return (
     <div className="flex items-center justify-center bg-white">
       <div className="flex h-[85vh] w-full items-center justify-center overflow-hidden">
-        {/* Left Sidebar - Chats List */}
         <div
-          className={`hide-scrollbar flex h-full w-full flex-col border-r border-[#ECECEC] bg-white pt-6 sm:w-1/3 lg:w-1/4 ${activeChat ? "hidden sm:block" : "block"}`}
+          className={`hide-scrollbar flex h-full w-full flex-col border-r border-[#ECECEC] bg-white pt-6 sm:w-1/3 lg:w-1/4 ${
+            activeChat ? "hidden sm:block" : "block"
+          }`}
         >
           <div className="custom-scrollbar h-full overflow-y-auto">
-            {/* Search Input */}
             <div className="mx-4 mb-1 flex rounded-full border border-gray-300 bg-white px-3 py-2">
               <CiSearch className="text-3xl text-gray-500" />
               <input
@@ -362,7 +347,6 @@ export default function ChatApp() {
               </div>
             </div>
 
-            {/* Chat List */}
             <ul>
               {loading ? (
                 <li className="p-4 text-center">Loading conversations...</li>
@@ -381,9 +365,7 @@ export default function ChatApp() {
                       }`}
                       onClick={() => handleSelectConversation(conversation)}
                     >
-                      {/* Container for Avatar, Text & Read Icon */}
                       <div className="flex w-full items-center">
-                        {/* Avatar + Tick Icon */}
                         <div className="relative mx-2 h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14">
                           <Image
                             alt="avatar"
@@ -391,7 +373,6 @@ export default function ChatApp() {
                             fill
                             className="rounded-full object-cover"
                           />
-
                           <div className="absolute right-0 bottom-0 flex h-3 w-3 items-center justify-center rounded-full bg-white shadow-md sm:h-4 sm:w-4">
                             <Image
                               alt="tick"
@@ -402,8 +383,6 @@ export default function ChatApp() {
                             />
                           </div>
                         </div>
-
-                        {/* Name & Status */}
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-black sm:text-sm md:text-base lg:text-base">
                             {otherUser && otherUser.name
@@ -424,8 +403,6 @@ export default function ChatApp() {
                               : "No messages yet"}
                           </p>
                         </div>
-
-                        {/* Time & Read Icon */}
                         <div className="flex flex-col items-end px-2">
                           <p className="text-xs text-gray-500 sm:text-sm">
                             {lastMsg && lastMsg.createdAt ? formatMessageTime(lastMsg.createdAt) : ""}
@@ -447,13 +424,13 @@ export default function ChatApp() {
           </div>
         </div>
 
-        {/* Middle Chat Section */}
         <div
-          className={`flex h-full w-full flex-col overflow-hidden bg-white sm:w-2/3 ${activeChat ? "block" : "hidden sm:block"}`}
+          className={`flex h-full w-full flex-col overflow-hidden bg-white sm:w-2/3 ${
+            activeChat ? "block" : "hidden sm:block"
+          }`}
         >
           {activeConversation ? (
             <>
-              {/* Chat Header */}
               <div className="border-b px-4 py-2">
                 <button className="mb-2 text-blue-500 sm:hidden" onClick={() => setActiveChat(false)}>
                   <IoIosArrowBack />
@@ -477,7 +454,6 @@ export default function ChatApp() {
                         />
                       </div>
                     </div>
-
                     <div className="ml-3 flex flex-col">
                       <p className="truncate text-sm font-semibold text-black sm:text-sm md:text-base lg:text-base">
                         {getOtherParticipant(activeConversation)?.name ||
@@ -494,10 +470,7 @@ export default function ChatApp() {
                   </div>
                 </div>
               </div>
-
-              {/* Chat Messages Section */}
               <div className="hide-scrollbar relative flex-1 overflow-y-auto p-4">
-                {/* Messages grouped by date */}
                 {getSortedDateKeys().map((dateKey) => (
                   <div key={dateKey}>
                     <div className="border-b py-2 text-center text-sm text-gray-400">{dateKey}</div>
@@ -505,7 +478,9 @@ export default function ChatApp() {
                       {messagesByDate[dateKey].map((msg) => (
                         <div
                           key={msg._id}
-                          className={`flex items-start ${msg.sender === currentUser._id ? "justify-end" : "justify-start"}`}
+                          className={`flex items-start ${
+                            msg.sender === currentUser._id ? "justify-end" : "justify-start"
+                          }`}
                         >
                           {msg.sender !== currentUser._id && (
                             <Image
@@ -540,8 +515,6 @@ export default function ChatApp() {
                     </div>
                   </div>
                 ))}
-
-                {/* Contract Section inside scroll - Only show if it exists */}
                 {activeConversation?.contractDetails && (
                   <div className="mx-auto w-full max-w-md rounded-lg bg-[#F7F7F8] px-4 py-3 shadow-md">
                     <p className="text-sm font-semibold text-gray-900">
@@ -589,40 +562,12 @@ export default function ChatApp() {
                 )}
                 <div ref={messagesEndRef} />
               </div>
-
-              {/* Fixed Input Section at the bottom */}
-              <div className="border-t border-gray-200 bg-white px-2 py-2">
-                <div className="mx-auto w-full rounded-xl bg-[#F7F7F8] p-2 shadow-inner lg:w-[98%]">
-                  <div className="flex w-full flex-wrap items-center justify-between rounded-lg border border-gray-300 p-2">
-                    <input
-                      type="text"
-                      placeholder="Type here something..."
-                      className="min-w-0 flex-1 bg-transparent text-xs text-gray-700 placeholder-gray-400 outline-none sm:text-sm md:text-base lg:text-sm"
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                      onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) =>
-                        e.key === "Enter" && handleSendMessage()
-                      }
-                    />
-                    <div className="ml-2 flex items-center space-x-2 sm:ml-4 sm:space-x-3">
-                      <FaBold className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
-                      <FaItalic className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
-                      <FaLink className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
-                      <FaSmile className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
-                    </div>
-                    <div className="mt-2 ml-2 flex flex-wrap items-center space-x-2 sm:mt-0 sm:ml-4 sm:space-x-4">
-                      <button className="rounded-full bg-[#5865F2] px-3 py-1 text-xs font-medium text-white sm:px-4 sm:py-2 sm:text-sm">
-                        Create an offer
-                      </button>
-                      <span
-                        onClick={handleSendMessage}
-                        className="cursor-pointer text-xs text-gray-700 hover:underline sm:text-sm"
-                      >
-                        Send Message
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <MessageInputBox
+                  messageText={messageText}
+                  setMessageText={setMessageText}
+                  handleSendMessage={handleSendMessage}
+                />
               </div>
             </>
           ) : (

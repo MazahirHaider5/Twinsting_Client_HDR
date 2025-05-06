@@ -1,3 +1,4 @@
+// redux/store.ts
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import userReducer from "./authSlice";
 import logger from "redux-logger";
@@ -28,10 +29,11 @@ const rootReducer = combineReducers({
 });
 
 // Ensure correct typing
-type RootReducerType = ReturnType<typeof rootReducer>;
+export type RootState = ReturnType<typeof rootReducer>;
+export type AppDispatch = typeof store.dispatch;
 
 // Persisted reducer configuration
-const persistedReducer = persistReducer<RootReducerType>(persistConfig, rootReducer);
+const persistedReducer = persistReducer<RootState>(persistConfig, rootReducer);
 
 // Configure the store
 const store = configureStore({
@@ -47,7 +49,64 @@ const store = configureStore({
 
 export const persistor = persistStore(store);
 
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-
 export default store;
+
+
+
+
+
+// import { combineReducers, configureStore } from "@reduxjs/toolkit";
+// import userReducer from "./authSlice";
+// import logger from "redux-logger";
+// import storage from "redux-persist/lib/storage";
+// import { persistReducer, persistStore, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from "redux-persist";
+// import { encryptTransform } from "redux-persist-transform-encrypt";
+
+// // Encryption transform configuration
+// const encryptor = encryptTransform({
+//   secretKey: process.env.NEXT_PUBLIC_REDUX_KEY || "default_dev_key",
+//   onError: function (error) {
+//     console.error("Encryption error:", error);
+//     storage.removeItem("persist:root");
+//   }
+// });
+
+// // Redux-persist configuration
+// const persistConfig = {
+//   key: "twist",
+//   storage,
+//   transforms: [encryptor],
+//   timeout: 2000,
+//   whitelist: ["user"]
+// };
+
+// const rootReducer = combineReducers({
+//   user: userReducer
+// });
+
+// // Ensure correct typing
+// type RootReducerType = ReturnType<typeof rootReducer>;
+
+// // Persisted reducer configuration
+// const persistedReducer = persistReducer<RootReducerType>(persistConfig, rootReducer);
+
+// // Configure the store
+// const store = configureStore({
+//   reducer: persistedReducer,
+//   middleware: (getDefaultMiddleware) =>
+//     getDefaultMiddleware({
+//       serializableCheck: {
+//         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER]
+//       }
+//     }).concat(logger),
+//   devTools: process.env.NODE_ENV !== "production"
+// });
+
+// export const persistor = persistStore(store);
+
+// export type RootState = ReturnType<typeof store.getState>;
+// export type AppDispatch = typeof store.dispatch;
+
+// export default store;
+
+

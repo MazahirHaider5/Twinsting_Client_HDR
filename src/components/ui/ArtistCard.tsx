@@ -5,7 +5,7 @@ import { MdLocationOn } from "react-icons/md";
 import Link from "next/link";
 
 interface ArtistCardProps {
-  id: number;
+  id: string;
   image: string;
   name: string;
   profession: string;
@@ -25,7 +25,14 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ id, image, name, profession, lo
       <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2">
         <div className="relative flex items-center justify-center">
           <div className="relative h-20 w-20 sm:h-24 sm:w-24">
-            <Image src={image} alt="Profile" width={96} height={96} className="rounded-full border-4 border-white" />
+            <Image
+              src={image}
+              alt="Profile"
+              width={96}
+              height={96}
+              className="h-full w-full rounded-full border-4 border-white object-cover"
+            />
+
             {/* Fixing the Check Icon */}
             <BsCheckCircleFill className="absolute right-1 bottom-1 rounded-full bg-white p-0.5 text-lg text-green-500 shadow-md sm:right-2 sm:bottom-2 sm:text-xl" />
           </div>
@@ -67,7 +74,7 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ id, image, name, profession, lo
           ))}
         </div>
         <div className="w-full p-2 sm:p-4">
-          <Link href={`/artist-profile?id=${id}`}>
+          <Link href={`/artist-profile?artistId=${id}`}>
             <p className="w-full rounded-lg border border-[#F5AF48] py-2 text-center text-xs font-semibold text-[#F5AF48] transition hover:bg-[#F5AF48] hover:text-white sm:py-3 sm:text-base">
               View Profile
             </p>

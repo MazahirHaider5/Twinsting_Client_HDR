@@ -10,14 +10,28 @@ import ServiceCard from "@/components/ui/ServiceCard";
 import ArtistCard from "@/components/ui/ArtistCard";
 import { ServiceData } from "../../types/services";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
+export interface IArtist {
+  _id: string;
+  profileImage?: string;
+  fullname: string;
+  username: string;
+  artistLocation: string;
+  skills?: string[];
+  user?: {
+    profilePicture?: string;
+  };
+}
 const HomePage = () => {
   const [allServices, setAllServices] = useState<ServiceData[]>([]);
+  const [artistsList, setArtistsList] = useState<IArtist[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const t = useTranslations("HomePage");
   useEffect(() => {
     getServices();
+    getArtists();
   }, []);
 
   const getServices = async () => {
@@ -31,6 +45,16 @@ const HomePage = () => {
     } catch (error) {
       // setLoading(false);
       console.error("Submit error:", error);
+    }
+  };
+  const getArtists = async () => {
+    try {
+      const response = await apiClient.get("/artist/getAllArtists");
+      if (response?.status === 200) {
+        setArtistsList(response.data.artists);
+      }
+    } catch (error) {
+      console.error("Error fetching artists:", error);
     }
   };
 
@@ -165,18 +189,33 @@ const HomePage = () => {
         <div className="m-6 space-y-6 rounded-xl border border-gray-300 bg-gray-100 p-6 sm:p-10 md:m-10">
           <span className="flex items-start justify-between">
             <p className="text-2xl font-bold sm:text-4xl">{t("topRatedArtists")}</p>
-            <p className="cursor-pointer text-sm text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline sm:text-base">
-              {t("showAll")}
-            </p>
+            <Link href="/all-artists">
+              <button className="cursor-pointer text-sm text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline sm:text-base">
+                {t("showAll")}
+              </button>
+            </Link>
           </span>
           {/* Responsive Grid Fix */}
-          <section className="my-6 mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {artists.map((artist) => (
-              <div key={artist.id} className="flex justify-center">
-                <ArtistCard {...artist} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
+            {artistsList.slice(0, 4).map((artist) => (
+              <div key={artist._id} className="flex justify-center">
+                <ArtistCard
+                  id={artist._id}
+                  image={
+                    artist.profileImage ||
+                    artist?.user?.profilePicture ||
+                    "https://static-00.iconduck.com/assets.00/profile-default-icon-2048x2045-u3j7s5nj.png"
+                  }
+                  name={artist.fullname}
+                  profession={artist.username}
+                  location={artist.artistLocation}
+                  rating={4}
+                  reviews={120}
+                  skills={artist.skills || []}
+                />
               </div>
             ))}
-          </section>
+          </div>
         </div>
 
         {/* Newsletter */}

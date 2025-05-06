@@ -13,7 +13,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 
 // API base URL - should be in your env file in a real app
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "https://twinsting-api-hdr.onrender.com";
 
 // Define interfaces for our data types
 interface User {

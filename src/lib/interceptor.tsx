@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { resetUser } from "@/redux/authSlice";
 
 const apiClient = axios.create({
-  baseURL: "http://localhost:5000"
+  baseURL: "https://twinsting-api-hdr.onrender.com"
   // baseURL: "https://twinsting-api-hdr.onrender.com"
   // headers: {
   //   "Content-Type": "application/json"

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CiSearch } from "react-icons/ci";
 import { BsCheck2All, BsThreeDotsVertical } from "react-icons/bs";
 import Image from "next/image";
@@ -7,58 +7,339 @@ import { LuCircleDollarSign } from "react-icons/lu";
 import { FaBold, FaItalic, FaLink, FaSmile } from "react-icons/fa";
 import { IoIosArrowBack } from "react-icons/io";
 
-const chatDetails = [
-  { id: 1, name: "Domenica", status: "Hey there, what's up?", time: "04:43" },
-  { id: 2, name: "Alex", status: "Let's meet tomorrow!", time: "12:15" },
-  { id: 3, name: "Sophia", status: "Call me when free!", time: "10:30" },
-  { id: 4, name: "James", status: "See you soon!", time: "09:45" },
-  { id: 5, name: "Olivia", status: "Meeting postponed.", time: "14:20" },
-  { id: 6, name: "Michael", status: "Send the files.", time: "16:50" },
-  { id: 7, name: "Emma", status: "Good morning!", time: "08:10" },
-  { id: 8, name: "William", status: "See my latest post!", time: "18:00" },
-  { id: 9, name: "Ava", status: "I'll call you back.", time: "20:30" },
-  { id: 10, name: "Daniel", status: "Join the group chat.", time: "22:15" }
-];
+import io, { Socket } from "socket.io-client";
+import apiClient from "@/lib/interceptor";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
-const messages = [
-  {
-    id: 1,
-    sender: "Domenica",
-    time: "10:23 AM",
-    text: "Hy Shanks, Are you available for a tuition?",
-    type: "received"
-  },
-  {
-    id: 2,
-    sender: "Domenica",
-    time: "10:23 AM",
-    text: "Can you share the process of your teaching with me?",
-    type: "received"
-  },
-  {
-    id: 3,
-    sender: "You",
-    time: "10:23 AM",
-    text: "Hi Nico, Yes! I am available, Can you share further details?",
-    type: "sent"
-  }
-];
+// API base URL - should be in your env file in a real app
+const API_BASE_URL = "http://localhost:5000";
+
+// Define interfaces for our data types
+interface User {
+  _id: string;
+  name?: string;
+  email: string;
+  username: string;
+}
+
+interface Message {
+  _id: string;
+  conversationId: string;
+  sender: string;
+  text: string;
+  createdAt: string;
+  isRead: boolean;
+}
+
+interface ContractDetails {
+  amount: number;
+  duration: string;
+  service: string;
+  isAccepted: boolean;
+}
+interface Reciever {
+  _id: string;
+  email: string;
+  profilePicture: string;
+  name: string;
+}
+interface Sender {
+  _id: string;
+  email: string;
+  profilePicture: string;
+  name: string;
+}
+interface Conversation {
+  _id: string;
+  participants: User[];
+  lastMessage?: Message;
+  unreadCount: number;
+  contractDetails?: ContractDetails;
+  receiver?: Reciever;
+  sender?: Sender;
+}
+
+// Group messages by date
+interface MessagesByDate {
+  [date: string]: Message[];
+}
+
+// Socket connection
+let socket: Socket | null = null;
 
 export default function ChatApp() {
-  const [activeChat, setActiveChat] = useState(true); // Set to true initially for the image view
+  const currentUser = useSelector((state: RootState) => state.user);
+
+  // State variables
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesByDate, setMessagesByDate] = useState<MessagesByDate>({});
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [activeChat, setActiveChat] = useState<boolean>(false);
+  const [messageText, setMessageText] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize socket connection
+  useEffect(() => {
+    // Initialize socket
+    socket = io(API_BASE_URL);
+
+    // Socket event listeners
+    socket.on("connect", () => {
+      console.log("Connected to socket server");
+    });
+
+    socket.on("receiveMessage", (message: Message) => {
+      if (activeConversation && message.conversationId === activeConversation._id) {
+        setMessages((prevMessages) => [...prevMessages, message]);
+
+        // Also update messagesByDate
+        setMessagesByDate((prev) => {
+          const dateKey = getMessageDateKey(new Date(message.createdAt));
+          return {
+            ...prev,
+            [dateKey]: [...(prev[dateKey] || []), message]
+          };
+        });
+      }
+
+      // Update conversation list to reflect new message
+      setConversations((prevConversations) => {
+        return prevConversations.map((conv) => {
+          if (conv._id === message.conversationId) {
+            return {
+              ...conv,
+              lastMessage: message,
+              unreadCount: conv.unreadCount + (message.sender !== currentUser._id ? 1 : 0)
+            };
+          }
+          return conv;
+        });
+      });
+    });
+
+    // Cleanup on unmount
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, [activeConversation, currentUser._id]);
+
+  // Fetch conversations on component mount
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const response = await apiClient.get(`/conversation/getAllUserConversations/${currentUser._id}`);
+        if (response.data.success) {
+          setConversations(response.data.data.conversations);
+          // console.log("THis is Reciever info", conversations.map((c) => c.receiver))
+          // console.log("THis is Sender info", conversations.map((c) => c.sender))
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching conversations:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchConversations();
+  }, [currentUser._id]);
+
+  // Fetch messages when a conversation is selected
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!activeConversation) return;
+
+      try {
+        const response = await apiClient.get(`/message/getMessagesInChat/${activeConversation._id}`);
+        if (response.data.success) {
+          setMessages(response.data.data);
+
+          // Group messages by date
+          const groupedMessages: MessagesByDate = {};
+          response.data.data.forEach((msg: Message) => {
+            const dateKey = getMessageDateKey(new Date(msg.createdAt));
+            if (!groupedMessages[dateKey]) {
+              groupedMessages[dateKey] = [];
+            }
+            groupedMessages[dateKey].push(msg);
+          });
+          setMessagesByDate(groupedMessages);
+
+          // Mark messages as read
+          await markMessagesAsRead();
+        }
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+      }
+    };
+
+    const markMessagesAsRead = async () => {
+      if (!activeConversation) return;
+
+      try {
+        await apiClient.put(`/message/read/${activeConversation._id}`, {
+          userId: currentUser._id
+        });
+
+        // Update conversations to reflect read messages
+        setConversations((prevConversations) =>
+          prevConversations.map((conv) => (conv._id === activeConversation._id ? { ...conv, unreadCount: 0 } : conv))
+        );
+      } catch (error) {
+        console.error("Error marking messages as read:", error);
+      }
+    };
+
+    if (activeConversation) {
+      fetchMessages();
+    }
+  }, [activeConversation, currentUser._id]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Get a date key for grouping messages
+  const getMessageDateKey = (date: Date): string => {
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return "TODAY";
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "YESTERDAY";
+    } else {
+      return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    }
+  };
+
+  // Handle sending a message
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !activeConversation) return;
+
+    const messageData = {
+      conversationId: activeConversation._id,
+      sender: currentUser._id,
+      text: messageText
+    };
+
+    try {
+      // Send message to API
+      const response = await apiClient.post(`/message/sendMessage`, messageData);
+      const newMessage = response.data.data;
+
+      // Add the new message to our messages list with the timestamp from the server
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+      // Update messagesByDate
+      const dateKey = getMessageDateKey(new Date(newMessage.createdAt));
+      setMessagesByDate((prev) => ({
+        ...prev,
+        [dateKey]: [...(prev[dateKey] || []), newMessage]
+      }));
+
+      // Update the conversation list to reflect the new message
+      setConversations((prevConversations) => {
+        return prevConversations.map((conv) => {
+          if (conv._id === activeConversation._id) {
+            return {
+              ...conv,
+              lastMessage: newMessage
+            };
+          }
+          return conv;
+        });
+      });
+
+      // Emit message via socket
+      socket?.emit("sendMessage", newMessage);
+
+      // Clear input
+      setMessageText("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
+
+  // Handle selecting a conversation
+  const handleSelectConversation = (conversation: Conversation) => {
+    setActiveConversation(conversation);
+    setActiveChat(true);
+  };
+
+  // Format timestamp to display time
+  const formatMessageTime = (timestamp: string): string => {
+    if (!timestamp) return "";
+
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return "";
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "";
+    }
+  };
+
+  // Get the other participant in the conversation
+  const getOtherParticipant = (conversation: Conversation | null): User | null => {
+    if (!conversation || !conversation.participants) return null;
+    return conversation.participants.find((p) => p._id !== currentUser._id) || conversation.participants[0];
+  };
+
+  // Filter conversations based on search term
+  const filteredConversations = conversations.filter((conv) => {
+    const otherUser = getOtherParticipant(conv);
+    return (
+      otherUser &&
+      ((otherUser.name && otherUser.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (otherUser.email && otherUser.email.toLowerCase().includes(searchTerm.toLowerCase())))
+    );
+  });
+
+  // Get sorted date keys for message groups
+  const getSortedDateKeys = (): string[] => {
+    const keys = Object.keys(messagesByDate);
+    const dateOrder: { [key: string]: number } = { TODAY: 1, YESTERDAY: 0 }; // TODAY should be later
+
+    return keys.sort((a, b) => {
+      if (a in dateOrder && b in dateOrder) {
+        return dateOrder[a] - dateOrder[b]; // keep as is
+      } else if (a in dateOrder) {
+        return 1; // put TODAY/YESTERDAY later
+      } else if (b in dateOrder) {
+        return -1;
+      } else {
+        return new Date(a).getTime() - new Date(b).getTime(); // sort older first, newer later
+      }
+    });
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F0F2F5]">
-      <div className="mx-5 flex h-[85vh] w-full max-w-full overflow-hidden rounded-xl shadow-lg">
+    <div className="flex items-center justify-center bg-white">
+      <div className="flex h-[85vh] w-full items-center justify-center overflow-hidden">
         {/* Left Sidebar - Chats List */}
         <div
-          className={`flex h-full w-full flex-col border-r border-[#ECECEC] bg-white pt-6 sm:w-1/3 lg:w-1/4 ${activeChat ? "hidden sm:block" : "block"}`}
+          className={`hide-scrollbar flex h-full w-full flex-col border-r border-[#ECECEC] bg-white pt-6 sm:w-1/3 lg:w-1/4 ${activeChat ? "hidden sm:block" : "block"}`}
         >
           <div className="custom-scrollbar h-full overflow-y-auto">
             {/* Search Input */}
             <div className="mx-4 mb-1 flex rounded-full border border-gray-300 bg-white px-3 py-2">
               <CiSearch className="text-3xl text-gray-500" />
-              <input type="text" placeholder="Search People" className="w-full bg-transparent outline-none" />
+              <input
+                type="text"
+                placeholder="Search People"
+                className="w-full bg-transparent outline-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
 
             <div className="px-4 py-3">
@@ -69,35 +350,120 @@ export default function ChatApp() {
                 <p className="rounded-full bg-[#F5F5F5] px-3 py-2.5 text-xs text-gray-700">
                   Unread Messages{" "}
                   <span className="ml-1 cursor-pointer rounded-full bg-gradient-to-r from-[#F5AF48] to-[#E32379] px-2 py-1 font-semibold whitespace-nowrap text-white">
-                    12
+                    {conversations.reduce((total, conv) => total + (conv.unreadCount || 0), 0)}
                   </span>
                 </p>
               </div>
               <div className="flex items-center gap-1">
                 <Image alt="tick" src="/twist-images/Frame (5).svg" width={18} height={18} className="object-contain" />
                 <h2 className="text-sm text-[#7D7C7E]">
-                  All Messages <span className="text-base text-black">(100)</span>
+                  All Messages <span className="text-base text-black">({conversations.length})</span>
                 </h2>
               </div>
             </div>
 
             {/* Chat List */}
             <ul>
-              {chatDetails.map((msg) => (
-                <li
-                  key={msg.id}
-                  className={`mb-2 flex w-full cursor-pointer items-center justify-between bg-white p-2 hover:bg-[#E8F0FE] ${
-                    activeChat && "" // Highlight active chat in desktop view
-                  }`}
-                  onClick={() => setActiveChat(true)}
-                >
-                  {/* Container for Avatar, Text & Read Icon */}
-                  <div className="flex w-full items-center">
-                    {/* Avatar + Tick Icon */}
-                    <div className="relative mx-2 h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14">
+              {loading ? (
+                <li className="p-4 text-center">Loading conversations...</li>
+              ) : filteredConversations.length === 0 ? (
+                <li className="p-4 text-center">No conversations found</li>
+              ) : (
+                filteredConversations.map((conversation) => {
+                  const otherUser = getOtherParticipant(conversation);
+                  const lastMsg = conversation.lastMessage;
+
+                  return (
+                    <li
+                      key={conversation._id}
+                      className={`mb-2 flex w-full cursor-pointer items-center justify-between bg-white p-2 hover:bg-[#E8F0FE] ${
+                        activeConversation && activeConversation._id === conversation._id ? "bg-[#E8F0FE]" : ""
+                      }`}
+                      onClick={() => handleSelectConversation(conversation)}
+                    >
+                      {/* Container for Avatar, Text & Read Icon */}
+                      <div className="flex w-full items-center">
+                        {/* Avatar + Tick Icon */}
+                        <div className="relative mx-2 h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14">
+                          <Image
+                            alt="avatar"
+                            src={conversation.receiver?.profilePicture || "/fallback-avatar.png"}
+                            fill
+                            className="rounded-full object-cover"
+                          />
+
+                          <div className="absolute right-0 bottom-0 flex h-3 w-3 items-center justify-center rounded-full bg-white shadow-md sm:h-4 sm:w-4">
+                            <Image
+                              alt="tick"
+                              src="/images/tickLoginIcon.png"
+                              width={12}
+                              height={12}
+                              className="object-contain"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Name & Status */}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-black sm:text-sm md:text-base lg:text-base">
+                            {otherUser && otherUser.name
+                              ? otherUser.name.length > 20
+                                ? otherUser.name.substring(0, 17) + "..."
+                                : otherUser.name
+                              : otherUser && otherUser.email
+                                ? otherUser.email.length > 20
+                                  ? otherUser.email.substring(0, 17) + "..."
+                                  : otherUser.email
+                                : "Unknown User"}
+                          </p>
+                          <p className="truncate text-xs text-gray-500 sm:text-xs md:text-sm lg:text-sm">
+                            {lastMsg && lastMsg.text
+                              ? lastMsg.text.length > 25
+                                ? lastMsg.text.substring(0, 22) + "..."
+                                : lastMsg.text
+                              : "No messages yet"}
+                          </p>
+                        </div>
+
+                        {/* Time & Read Icon */}
+                        <div className="flex flex-col items-end px-2">
+                          <p className="text-xs text-gray-500 sm:text-sm">
+                            {lastMsg && lastMsg.createdAt ? formatMessageTime(lastMsg.createdAt) : ""}
+                          </p>
+                          {lastMsg && (
+                            <BsCheck2All
+                              className={`mt-1 text-xs sm:text-sm ${
+                                lastMsg.isRead ? "text-blue-500" : "text-gray-400"
+                              }`}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>
+        </div>
+
+        {/* Middle Chat Section */}
+        <div
+          className={`flex h-full w-full flex-col overflow-hidden bg-white sm:w-2/3 ${activeChat ? "block" : "hidden sm:block"}`}
+        >
+          {activeConversation ? (
+            <>
+              {/* Chat Header */}
+              <div className="border-b px-4 py-2">
+                <button className="mb-2 text-blue-500 sm:hidden" onClick={() => setActiveChat(false)}>
+                  <IoIosArrowBack />
+                </button>
+                <div className="flex items-center justify-between pt-5">
+                  <div className="flex items-center">
+                    <div className="relative h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14">
                       <Image
                         alt="avatar"
-                        src="/images/serviceUserProfile.png"
+                        src={activeConversation.receiver?.profilePicture || "/fallback-avatar.png"}
                         fill
                         className="rounded-full object-cover"
                       />
@@ -112,169 +478,158 @@ export default function ChatApp() {
                       </div>
                     </div>
 
-                    {/* Name & Status */}
-                    <div className="min-w-0 flex-1">
+                    <div className="ml-3 flex flex-col">
                       <p className="truncate text-sm font-semibold text-black sm:text-sm md:text-base lg:text-base">
-                        {msg.name.length > 20 ? msg.name.substring(0, 17) + "..." : msg.name}
+                        {getOtherParticipant(activeConversation)?.name ||
+                          getOtherParticipant(activeConversation)?.email ||
+                          "Unknown User"}
                       </p>
-                      <p className="truncate text-xs text-gray-500 sm:text-xs md:text-sm lg:text-sm">
-                        {msg.status.length > 25 ? msg.status.substring(0, 22) + "..." : msg.status}
-                      </p>
-                    </div>
-
-                    {/* Time & Read Icon */}
-                    <div className="flex flex-col items-end px-2">
-                      <p className="text-xs text-gray-500 sm:text-sm">{msg.time}</p>
-                      <BsCheck2All className="mt-1 text-xs text-blue-500 sm:text-sm" />
+                      <p className="truncate text-xs text-gray-500 sm:text-xs md:text-sm lg:text-sm">Active</p>
                     </div>
                   </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Middle Chat Section */}
-        <div
-          className={`flex h-full w-full flex-col overflow-hidden bg-white sm:w-2/3 ${activeChat ? "block" : "hidden sm:block"}`}
-        >
-          {/* Chat Header */}
-          <div className="border-b px-4 py-2">
-            <button className="mb-2 text-blue-500 sm:hidden" onClick={() => setActiveChat(false)}>
-              <IoIosArrowBack />
-            </button>
-            <div className="flex items-center justify-between pt-5">
-              <div className="flex items-center">
-                <div className="relative h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14">
-                  <Image alt="avatar" src="/images/serviceUserProfile.png" fill className="rounded-full object-cover" />
-                  <div className="absolute right-0 bottom-0 flex h-3 w-3 items-center justify-center rounded-full bg-white shadow-md sm:h-4 sm:w-4">
-                    <Image
-                      alt="tick"
-                      src="/images/tickLoginIcon.png"
-                      width={12}
-                      height={12}
-                      className="object-contain"
-                    />
+                  <div className="flex items-center">
+                    <div className="rounded bg-gray-100 p-2">
+                      <BsThreeDotsVertical className="text-lg text-gray-600" />
+                    </div>
                   </div>
                 </div>
-
-                <div className="ml-3 flex flex-col">
-                  <p className="truncate text-sm font-semibold text-black sm:text-sm md:text-base lg:text-base">
-                    Domenica
-                  </p>
-                  <p className="truncate text-xs text-gray-500 sm:text-xs md:text-sm lg:text-sm">Active</p>
-                </div>
               </div>
-              <div className="flex items-center">
-                <div className="rounded bg-gray-100 p-2">
-                  <BsThreeDotsVertical className="text-lg text-gray-600" />
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Chat Messages Section */}
-          <div className="relative flex-1 overflow-y-auto p-4">
-            {/* Top Section */}
-            <div className="border-b py-2 text-center text-sm text-gray-400">TODAY</div>
-
-            {/* Scrollable Content */}
-            <div className="flex flex-col space-y-3 py-2">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex items-start ${msg.type === "sent" ? "justify-end" : "justify-start"}`}
-                >
-                  {msg.type === "received" && (
-                    <Image
-                      src="/images/serviceUserProfile.png"
-                      width={32}
-                      height={32}
-                      alt="Avatar"
-                      className="mr-2 h-8 w-8 rounded-full sm:h-10 sm:w-10"
-                    />
-                  )}
-                  <div
-                    className={`max-w-xs rounded-lg px-3 py-2 shadow sm:max-w-sm md:max-w-md ${
-                      msg.type === "sent"
-                        ? "rounded-br-none bg-gradient-to-r from-orange-400 to-pink-500 text-white"
-                        : "rounded-bl-none bg-[#F3F3F3] text-gray-800"
-                    }`}
-                  >
-                    <p className="text-sm">{msg.text}</p>
-                    <p className="mt-1 text-right text-xs text-gray-500">{msg.time}</p>
+              {/* Chat Messages Section */}
+              <div className="hide-scrollbar relative flex-1 overflow-y-auto p-4">
+                {/* Messages grouped by date */}
+                {getSortedDateKeys().map((dateKey) => (
+                  <div key={dateKey}>
+                    <div className="border-b py-2 text-center text-sm text-gray-400">{dateKey}</div>
+                    <div className="flex flex-col space-y-3 py-2">
+                      {messagesByDate[dateKey].map((msg) => (
+                        <div
+                          key={msg._id}
+                          className={`flex items-start ${msg.sender === currentUser._id ? "justify-end" : "justify-start"}`}
+                        >
+                          {msg.sender !== currentUser._id && (
+                            <Image
+                              src={activeConversation.receiver?.profilePicture || "/fallback-avatar.png"}
+                              width={32}
+                              height={32}
+                              alt="Avatar"
+                              className="mr-2 h-8 w-8 rounded-full sm:h-10 sm:w-10"
+                            />
+                          )}
+                          <div
+                            className={`max-w-xs rounded-lg px-3 py-2 shadow sm:max-w-sm md:max-w-md ${
+                              msg.sender === currentUser._id
+                                ? "rounded-br-none bg-gradient-to-r from-orange-400 to-pink-500 text-white"
+                                : "rounded-bl-none bg-[#F3F3F3] text-gray-800"
+                            }`}
+                          >
+                            <p className="text-sm">{msg.text}</p>
+                            <p className="mt-1 text-right text-xs text-gray-500">{formatMessageTime(msg.createdAt)}</p>
+                          </div>
+                          {msg.sender === currentUser._id && (
+                            <Image
+                              src={currentUser.profilePicture || "/fallback-avatar.png"}
+                              width={32}
+                              height={32}
+                              alt="Avatar"
+                              className="ml-2 h-8 w-8 rounded-full sm:h-10 sm:w-10"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  {msg.type === "sent" && (
-                    <Image
-                      src="/images/serviceUserProfile.png"
-                      width={32}
-                      height={32}
-                      alt="Avatar"
-                      className="ml-2 h-8 w-8 rounded-full sm:h-10 sm:w-10"
-                    />
-                  )}
-                </div>
-              ))}
+                ))}
 
-              {/* Contract Section inside scroll */}
-              <div className="mx-auto w-full max-w-md rounded-lg bg-[#F7F7F8] px-4 py-3 shadow-md">
-                <p className="text-sm font-semibold text-gray-900">Boa Hancock do you want to be hired?</p>
-                <p className="text-xs text-gray-500">
-                  The term of this contract is for one year, commencing on 23 Sep, 2023 and ending on 23 Sep, 2024.
-                </p>
-                <p className="pt-2 text-sm text-gray-900">Your offer Included:</p>
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-1">
-                    <LuCircleDollarSign className="h-3 w-3 text-gray-900" />
-                    <p className="text-xs font-bold text-gray-600">
-                      Amount: <span className="font-semibold text-gray-900">$15</span>
+                {/* Contract Section inside scroll - Only show if it exists */}
+                {activeConversation?.contractDetails && (
+                  <div className="mx-auto w-full max-w-md rounded-lg bg-[#F7F7F8] px-4 py-3 shadow-md">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {getOtherParticipant(activeConversation)?.name || "User"} do you want to be hired?
                     </p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {/* You can add icons for Duration and Service here if needed */}
-                    <p className="text-xs font-bold text-gray-600">
-                      Duration: <span className="font-semibold text-gray-900">One Week</span>
+                    <p className="text-xs text-gray-500">
+                      The term of this contract is for one year, commencing on 23 Sep, 2023 and ending on 23 Sep, 2024.
                     </p>
+                    <p className="pt-2 text-sm text-gray-900">Your offer Included:</p>
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-1">
+                        <LuCircleDollarSign className="h-3 w-3 text-gray-900" />
+                        <p className="text-xs font-bold text-gray-600">
+                          Amount:{" "}
+                          <span className="font-semibold text-gray-900">
+                            ${activeConversation.contractDetails.amount}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <p className="text-xs font-bold text-gray-600">
+                          Duration:{" "}
+                          <span className="font-semibold text-gray-900">
+                            {activeConversation.contractDetails.duration}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <p className="text-xs font-bold text-gray-600">
+                          Service:{" "}
+                          <span className="font-semibold text-gray-900">
+                            {activeConversation.contractDetails.service}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-2 w-full border-b border-gray-200"></div>
+                    <div className="flex w-full items-center justify-end gap-2 py-2">
+                      <p className="text-left text-xs whitespace-nowrap text-black underline">View Contract Detail</p>
+                      <div className="rounded-lg bg-[#D1FAE5] px-2 py-1 text-xs text-green-700">
+                        {activeConversation.contractDetails.isAccepted ? "Contract Accepted" : "Pending"}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <p className="text-xs font-bold text-gray-600">
-                      Service: <span className="font-semibold text-gray-900">Online</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-2 w-full border-b border-gray-200"></div>
-                <div className="flex w-full items-center justify-end gap-2 py-2">
-                  <p className="text-left text-xs whitespace-nowrap text-black underline">View Contract Detail</p>
-                  <div className="rounded-lg bg-[#D1FAE5] px-2 py-1 text-xs text-green-700">Contract Accepted</div>
-                </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
-            </div>
-          </div>
 
-          {/* Fixed Input Section at the bottom */}
-          <div className="border-t border-gray-200 bg-white px-2 py-2">
-            <div className="mx-auto w-full rounded-xl bg-[#F7F7F8] p-2 shadow-inner lg:w-[98%]">
-              <div className="flex w-full flex-wrap items-center justify-between rounded-lg border border-gray-300 p-2">
-                <input
-                  type="text"
-                  placeholder="Type here something..."
-                  className="min-w-0 flex-1 bg-transparent text-xs text-gray-700 placeholder-gray-400 outline-none sm:text-sm md:text-base lg:text-sm"
-                />
-                <div className="ml-2 flex items-center space-x-2 sm:ml-4 sm:space-x-3">
-                  <FaBold className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
-                  <FaItalic className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
-                  <FaLink className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
-                  <FaSmile className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
-                </div>
-                <div className="mt-2 ml-2 flex flex-wrap items-center space-x-2 sm:mt-0 sm:ml-4 sm:space-x-4">
-                  <button className="rounded-full bg-[#5865F2] px-3 py-1 text-xs font-medium text-white sm:px-4 sm:py-2 sm:text-sm">
-                    Create an offer
-                  </button>
-                  <span className="cursor-pointer text-xs text-gray-700 hover:underline sm:text-sm">Send Message</span>
+              {/* Fixed Input Section at the bottom */}
+              <div className="border-t border-gray-200 bg-white px-2 py-2">
+                <div className="mx-auto w-full rounded-xl bg-[#F7F7F8] p-2 shadow-inner lg:w-[98%]">
+                  <div className="flex w-full flex-wrap items-center justify-between rounded-lg border border-gray-300 p-2">
+                    <input
+                      type="text"
+                      placeholder="Type here something..."
+                      className="min-w-0 flex-1 bg-transparent text-xs text-gray-700 placeholder-gray-400 outline-none sm:text-sm md:text-base lg:text-sm"
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) =>
+                        e.key === "Enter" && handleSendMessage()
+                      }
+                    />
+                    <div className="ml-2 flex items-center space-x-2 sm:ml-4 sm:space-x-3">
+                      <FaBold className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
+                      <FaItalic className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
+                      <FaLink className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
+                      <FaSmile className="cursor-pointer text-xs text-gray-600 hover:text-black sm:text-sm" />
+                    </div>
+                    <div className="mt-2 ml-2 flex flex-wrap items-center space-x-2 sm:mt-0 sm:ml-4 sm:space-x-4">
+                      <button className="rounded-full bg-[#5865F2] px-3 py-1 text-xs font-medium text-white sm:px-4 sm:py-2 sm:text-sm">
+                        Create an offer
+                      </button>
+                      <span
+                        onClick={handleSendMessage}
+                        className="cursor-pointer text-xs text-gray-700 hover:underline sm:text-sm"
+                      >
+                        Send Message
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </>
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center">
+              <p className="text-gray-500">Select a conversation to start chatting</p>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

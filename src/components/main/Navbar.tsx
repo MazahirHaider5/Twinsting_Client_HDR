@@ -64,14 +64,14 @@ const Navbar = () => {
             placeholder="Search for anything"
             className="w-full rounded-lg bg-gray-200 p-2 text-sm focus:outline-none sm:p-3 sm:text-base"
           />
-          <section className="flex w-full items-center rounded-lg bg-gray-200 px-2 sm:px-3">
+          <div className="flex w-full items-center rounded-lg bg-gray-200 px-2 sm:px-3">
             <FaLocationDot className="size-5 text-gray-500 sm:size-6" />
             <input
               defaultValue=""
               placeholder="Location.."
               className="w-full rounded-lg p-2 text-sm focus:outline-none sm:p-3 sm:text-base"
             />
-          </section>
+          </div>
           <div className="gradient ml-auto flex size-10 items-center justify-center self-end rounded-lg p-2 sm:size-12 sm:p-3 lg:size-auto">
             <IoSearch className="text-lg text-white sm:text-2xl" />
           </div>

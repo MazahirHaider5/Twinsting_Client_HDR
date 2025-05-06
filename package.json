@@ -18,6 +18,7 @@
     "apexcharts": "^4.5.0",
     "axios": "^1.8.4",
     "daisyui": "^5.0.6",
+    "date-fns": "^4.1.0",
     "formik": "^2.4.6",
     "lightningcss": "^1.29.3",
     "lucide-react": "^0.484.0",
@@ -36,6 +37,7 @@
     "redux-logger": "^3.0.6",
     "redux-persist": "^6.0.0",
     "redux-persist-transform-encrypt": "^5.1.1",
+    "socket.io-client": "^4.8.1",
     "sweetalert2": "^11.19.1",
     "swiper": "^11.2.5",
     "yup": "^1.6.1"

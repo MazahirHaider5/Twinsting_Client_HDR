@@ -7,10 +7,12 @@ import toast from "react-hot-toast";
 import apiClient from "@/lib/interceptor";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+
 interface PackageData {
   name: string;
   description: string;
-  price: string;
+  price: number;
+  deliveryTime: number;
 }
 
 const PricingForm: React.FC = () => {
@@ -20,31 +22,38 @@ const PricingForm: React.FC = () => {
 
   const formik = useFormik({
     initialValues: {
-      Starter: { name: "", description: "", price: "" },
-      Standard: { name: "", description: "", price: "" },
-      Advanced: { name: "", description: "", price: "" }
+      Starter: { name: "", description: "", price: "", deliveryTime: "" },
+      Standard: { name: "", description: "", price: "", deliveryTime: "" },
+      Advance: { name: "", description: "", price: "", deliveryTime: "" },
     },
     validationSchema: Yup.object({
       Starter: Yup.object({
         name: Yup.string().required("Name is required"),
         description: Yup.string().required("Description is required"),
-        price: Yup.number().typeError("Must be a number").required("Price is required")
+        price: Yup.number().typeError("Must be a number").required("Price is required"),
+        deliveryTime: Yup.number().typeError("Must be a number").required("Delivery time is required"),
       }),
       Standard: Yup.object({
         name: Yup.string().required("Name is required"),
         description: Yup.string().required("Description is required"),
-        price: Yup.number().typeError("Must be a number").required("Price is required")
+        price: Yup.number().typeError("Must be a number").required("Price is required"),
+        deliveryTime: Yup.number().typeError("Must be a number").required("Delivery time is required"),
       }),
-      Advanced: Yup.object({
+      Advance: Yup.object({
         name: Yup.string().required("Name is required"),
         description: Yup.string().required("Description is required"),
-        price: Yup.number().typeError("Must be a number").required("Price is required")
-      })
+        price: Yup.number().typeError("Must be a number").required("Price is required"),
+        deliveryTime: Yup.number().typeError("Must be a number").required("Delivery time is required"),
+      }),
     }),
     onSubmit: async (values) => {
       setLoading(true);
       try {
-        const response = await apiClient.patch(`/service/pricing/${id}`, values);
+        const response = await apiClient.patch(`/service/pricing/${id}`, {
+          starter: values.Starter,
+          standard: values.Standard,
+          advance: values.Advance,
+        });
         if (response.status === 200 || response.status === 201) {
           toast.success("Pricing submitted successfully!");
           router.push(`/artist-side/service-creation/description/${id}`);
@@ -54,20 +63,22 @@ const PricingForm: React.FC = () => {
       } finally {
         setLoading(false);
       }
-    }
+    },
   });
+
   const user = useSelector((state: RootState) => state.user);
   useEffect(() => {
     if (!user?._id && !user?.email) {
       router.push("/signin");
     }
   }, [user, router]);
+
   const renderInput = (tier: keyof typeof formik.values, field: keyof PackageData, mobile?: boolean) => {
     const error = formik.touched?.[tier]?.[field] && formik.errors?.[tier]?.[field];
     return (
       <div className={mobile ? "mb-2" : ""}>
         <input
-          type={field === "price" ? "number" : "text"}
+          type={field === "price" || field === "deliveryTime" ? "number" : "text"}
           placeholder={`Enter ${field}...`}
           className="w-full rounded border p-2"
           value={formik.values[tier][field]}
@@ -97,13 +108,13 @@ const PricingForm: React.FC = () => {
                 <tr className="bg-gray-100 text-gray-700">
                   {Object.keys(formik.values).map((tier) => (
                     <th key={tier} className="p-3">
-                      {tier}
+                      {tier.charAt(0).toUpperCase() + tier.slice(1)}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {["name", "description", "price"].map((field) => (
+                {["name", "description", "price", "deliveryTime"].map((field) => (
                   <tr key={field}>
                     {Object.keys(formik.values).map((tier) => (
                       <td key={tier} className="p-3">
@@ -121,7 +132,7 @@ const PricingForm: React.FC = () => {
             {Object.keys(formik.values).map((tier) => (
               <div key={tier} className="rounded-lg bg-gray-100 p-4 shadow-sm">
                 <h4 className="mb-2 text-lg font-semibold">{tier}</h4>
-                {["name", "description", "price"].map((field) =>
+                {["name", "description", "price", "deliveryTime"].map((field) =>
                   renderInput(tier as keyof typeof formik.values, field as keyof PackageData, true)
                 )}
               </div>
@@ -131,9 +142,6 @@ const PricingForm: React.FC = () => {
 
         {/* Footer */}
         <div className="mt-6 mb-6 flex w-full justify-center gap-5 md:mt-12">
-          {/* <button type="button" className="rounded-full bg-gray-200 px-6 py-2 text-gray-700">
-            Preview
-          </button> */}
           <button
             disabled={loading}
             type="submit"

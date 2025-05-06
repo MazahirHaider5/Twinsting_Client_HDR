@@ -60,7 +60,7 @@ const LoginPage = () => {
     setError(null);
 
     try {
-      const response = await axios.post("https://twinsting-api-hdr.onrender.com/auth/signin", {
+      const response = await apiClient.post("/auth/signin", {
         email,
         password,
         rememberMe

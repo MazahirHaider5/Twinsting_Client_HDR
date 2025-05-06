@@ -12,28 +12,61 @@ import {
   FaChevronRight
 } from "react-icons/fa";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MdOutlineWatchLater } from "react-icons/md";
+import { useParams } from "next/navigation";
+import apiClient from "@/lib/interceptor";
+import ConfirmOrderModal from "@/components/modals/ConfirmOrderModal";
 
-const images = [
-  "/images/servicebg4.jpg",
-  "/images/servicebg5.jpg",
-  "/images/servicebg6.jpg",
-  "/images/servicebg7.jpg",
-  "/images/servicebg4.jpg",
-  "/images/servicebg6.jpg",
-  "/images/servicebg7.jpg",
-  "/images/servicebg5.jpg",
-  "/images/servicebg4.jpg"
-];
+// Define types for our API response
+type Package = {
+  name: string;
+  description: string;
+  price: number;
+  _id: string;
+  deliveryTime: number;
+};
 
-const reviews = [
-  { stars: 5, count: 1405 },
-  { stars: 4, count: 385 },
-  { stars: 3, count: 98 },
-  { stars: 2, count: 120 },
-  { stars: 1, count: 400 }
-];
+type Pricing = {
+  starter?: Package;
+  standard?: Package;
+  advanced?: Package;
+  [key: string]: Package | undefined;
+};
+
+type Media = {
+  photos: string[];
+  videos: string[];
+  _id: string;
+};
+type Artist = {
+  _id: string;
+  name: string;
+  email: string;
+  profilePicture: string;
+  location: string;
+  profile_description: string;
+  username: string;
+};
+type ServiceData = {
+  _id: string;
+  artist_id: Artist;
+  title: string;
+  category: string;
+  subcategory: string;
+  searchTags: string[];
+  description: string;
+  media: Media;
+  pricing: Pricing;
+  status: string;
+  orders: any[];
+  reviews: Review[];
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+};
+
+
 // Define the Review Type
 type Review = {
   id: number;
@@ -44,6 +77,7 @@ type Review = {
   avatar: string;
 };
 
+// Temporary reviews data until we have real reviews from API
 const reviewsData: Review[] = [
   {
     id: 1,
@@ -89,127 +123,163 @@ const reviewsData: Review[] = [
     review:
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
     avatar: "/images/serviceUserProfile.png"
-  },
-  {
-    id: 6,
-    name: "Domenica",
-    date: "July 14, 2023",
-    rating: 3,
-    review:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    avatar: "/images/serviceUserProfile.png"
-  },
-  {
-    id: 7,
-    name: "Domenica",
-    date: "July 14, 2023",
-    rating: 4,
-    review:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    avatar: "/images/serviceUserProfile.png"
-  },
-  {
-    id: 8,
-    name: "Domenica",
-    date: "July 14, 2023",
-    rating: 2,
-    review:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua",
-    avatar: "/images/serviceUserProfile.png"
-  },
-  {
-    id: 9,
-    name: "Domenica",
-    date: "July 14, 2023",
-    rating: 1,
-    review:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    avatar: "/images/serviceUserProfile.png"
   }
 ];
+
+// Calculate review stats based on review data
+const calculateReviewStats = (reviews: Review[]) => {
+  const stats = [
+    { stars: 5, count: 0 },
+    { stars: 4, count: 0 },
+    { stars: 3, count: 0 },
+    { stars: 2, count: 0 },
+    { stars: 1, count: 0 }
+  ];
+
+  reviews.forEach((review) => {
+    const starIndex = 5 - review.rating;
+    if (starIndex >= 0 && starIndex < 5) {
+      stats[starIndex].count += 1;
+    }
+  });
+
+  return stats;
+};
+
 const filterOptions: (number | "All")[] = ["All", 5, 4, 3, 2, 1];
+
 const ServicePage = () => {
-  const [selectedPackage, setSelectedPackage] = useState("Standard");
-  const [selectedImage, setSelectedImage] = useState(images[0]);
+  const params = useParams();
+  const serviceId = params.id as string;
+
+  const [service, setService] = useState<ServiceData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [selectedPackage, setSelectedPackage] = useState<string>("standard");
+  const [selectedImage, setSelectedImage] = useState<string>("");
   const [selectedFilter, setSelectedFilter] = useState<number | "All">("All");
 
+  useEffect(() => {
+    const fetchServiceData = async () => {
+      try {
+        setLoading(true);
+        const response = await apiClient.get(`/service/getServiceById/${serviceId}`);
+        const data = response.data;
+        // console.log("This is service response data", response);
+        // const service = response.data.data;
+        // console.log(service.artist_id);
+
+        if (data.success) {
+          setService(data.data);
+          // Set default selected image if media exists
+          if (data.data.media?.photos && data.data.media.photos.length > 0) {
+            setSelectedImage(data.data.media.photos[0]);
+          }
+
+          // Set default selected package based on what's available
+          if (data.data.pricing) {
+            const availablePackages = Object.keys(data.data.pricing);
+            if (availablePackages.length > 0) {
+              setSelectedPackage(availablePackages[0]);
+            }
+          }
+        } else {
+          setError(data.message || "Failed to fetch service data");
+        }
+      } catch (err) {
+        setError("An error occurred while fetching service data");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (serviceId) {
+      fetchServiceData();
+    }
+  }, [serviceId]);
+
+  // Use reviews data for now, but in the future this would come from the API
+  const reviews = calculateReviewStats(reviewsData);
   const totalReviews = reviews.reduce((acc, review) => acc + review.count, 0);
 
   // Filter reviews based on selection
   const filteredReviews =
     selectedFilter === "All" ? reviewsData : reviewsData.filter((review) => review.rating === selectedFilter);
 
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Loading service details...</div>;
+  }
+
+  if (error || !service) {
+    return <div className="flex h-screen items-center justify-center text-red-500">{error || "Service not found"}</div>;
+  }
+
+  // Extract available packages for display
+  const availablePackages = Object.keys(service.pricing || {});
+
+  // Get all media images
+  const allImages = service.media?.photos || [];
+
+  // Helper function to get current package price
+  const getCurrentPackagePrice = () => {
+    const pkg = service.pricing[selectedPackage];
+    return pkg ? pkg.price : 0;
+  };
+
   return (
     <>
-      <main className="grid grid-cols-1 gap-6 bg-white px-10 pt-10 md:grid-cols-3">
+      <main className="mx-auto grid max-w-[90%] grid-cols-1 gap-6 bg-white px-10 pt-10 md:grid-cols-3">
         {/* *****************Left Section**************************** */}
         <section className="md:col-span-2">
           <div>
-            <h1 className="text-2xl font-bold">
-              Providing Multiple Services for <br /> Companies - Easy
-            </h1>
+            <h1 className="text-2xl font-bold">{service.title}</h1>
             <div className="mt-2 flex items-center text-gray-600">
               <Image
-                src="/images/serviceUserProfile.png"
-                alt="Domenica"
+                src={service.artist_id.profilePicture}
+                alt="Artist"
                 width={30}
                 height={30}
                 className="rounded-full"
               />
-              <span className="ps-2 font-semibold">Domenica</span>
+              <span className="ps-2 font-semibold">{service.artist_id.name}</span>
               <FaStar className="ms-6 pe-2 text-yellow-500" />
-              <span>4.9 (3,058 reviews)</span>
+              <span>4.9 ({totalReviews} reviews)</span>
             </div>
             {/* Main Image Display */}
-            <div className="relative mt-4 h-[40rem] w-full">
-              <Image
-                src={selectedImage}
-                alt="Selected Service Preview"
-                fill
-                className="rounded-lg object-cover object-center"
-              />
-            </div>
+            {selectedImage && (
+              <div className="relative mt-4 h-[30rem] w-[90%]">
+                <Image
+                  src={selectedImage}
+                  alt="Selected Service Preview"
+                  fill
+                  className="rounded-lg object-cover object-center"
+                />
+              </div>
+            )}
 
             {/* Thumbnail Gallery */}
-            <div className="mt-4 flex w-full gap-4">
-              {images.map((img, index) => (
-                <div
-                  key={index}
-                  className={`h-20 w-20 cursor-pointer overflow-hidden rounded-lg border-2 ${
-                    selectedImage === img ? "border-blue-500" : "border-transparent"
-                  }`}
-                  onClick={() => setSelectedImage(img)}
-                >
-                  <Image src={img} alt="Thumbnail" width={80} height={80} className="object-cover" />
-                </div>
-              ))}
-            </div>
+            {allImages.length > 0 && (
+              <div className="mt-4 flex w-full gap-4">
+                {allImages.map((img, index) => (
+                  <div
+                    key={index}
+                    className={`h-20 w-20 cursor-pointer overflow-hidden rounded-lg border-2 ${
+                      selectedImage === img ? "border-blue-500" : "border-transparent"
+                    }`}
+                    onClick={() => setSelectedImage(img)}
+                  >
+                    <Image src={img} alt="Thumbnail" width={80} height={80} className="bg-amber-50 object-cover" />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           {/* -------------about section-----------  */}
           <div className="py-10">
             <h1 className="text-2xl font-semibold">About Service</h1>
-            <p className="text-justify">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et
-              dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex
-              ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-              fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt
-              mollit anim id est laborum.
-            </p>
-            <p className="text-justify">
-              Dignissim enim sit amet venenatis urna cursus eget nunc. Mauris ultrices eros in cursus turpis massa
-              tincidunt dui ut. Nibh praesent tristique magna sit amet. Dolor sit amet consectetur adipiscing. Duis at
-              consectetur lorem donec massa sapien. Aliquam etiam erat velit scelerisque. Diam ut venenatis tellus in
-              metus vulputate eu scelerisque felis. Proin sed libero enim sed faucibus. Ultrices gravida dictum fusce ut
-              placerat orci nulla. Volutpat blandit aliquam etiam erat velit scelerisque in dictum.
-            </p>
-            <p className="text-justify">
-              Quam adipiscing vitae proin sagittis nisl rhoncus mattis. Egestas integer eget aliquet nibh praesent
-              tristique magna sit amet. Mattis vulputate enim nulla aliquet porttitor lacus luctus accumsan tortor.
-              Facilisi etiam dignissim diam quis enim lobortis scelerisque. Sit amet luctus venenatis lectus magna
-              fringilla. Fringilla phasellus faucibus scelerisque eleifend donec pretium vulputate. Semper quis lectus
-              nulla at volutpat diam ut venenatis tellus. Facilisi cras fermentum odio eu feugiat pretium nibh ipsum
-              consequat. Mi ipsum faucibus vitae aliquet nec ullamcorper.
-            </p>
+            <p className="text-justify">{service.description}</p>
           </div>
           {/* -------------review section ------------ */}
           <h2 className="mb-2 text-2xl font-semibold">Reviews</h2>
@@ -233,19 +303,20 @@ const ServicePage = () => {
               );
             })}
           </div>
-          <div className="my-6 flex space-x-2">
+          <div className="my-6 flex flex-wrap justify-center gap-2 sm:justify-start">
             {filterOptions.map((option) => (
               <button
                 key={option}
                 onClick={() => setSelectedFilter(option)}
-                className={`cursor-pointer rounded-lg border px-10 py-2 ${
+                className={`cursor-pointer rounded-lg border px-6 py-2 text-sm transition-colors duration-200 sm:px-10 sm:text-base ${
                   selectedFilter === option ? "bg-orange-400 text-white" : "border-gray-300 bg-white text-gray-700"
                 }`}
               >
-                {option === "All" ? "All" : `${option} Star `}
+                {option === "All" ? "All" : `${option} Star`}
               </button>
             ))}
           </div>
+
           {filteredReviews.map((review) => (
             <div key={review.id} className="mb-4 border-b pb-1">
               <div className="flex items-center space-x-3">
@@ -311,7 +382,7 @@ const ServicePage = () => {
             </div>
             {/* Package Selection */}
             <div className="my-4 flex justify-between">
-              {["Starter", "Standard", "Advanced"].map((pkg, index) => (
+              {availablePackages.map((pkg, index) => (
                 <div
                   key={index}
                   className={`flex w-1/3 cursor-pointer flex-col items-center rounded-lg p-4`}
@@ -320,25 +391,31 @@ const ServicePage = () => {
                   <div className="flex h-7 w-7 items-center justify-center rounded-full border-4 border-[#E0E0E0]">
                     {selectedPackage === pkg && <div className="h-4 w-4 rounded-full bg-[#E0E0E0]"></div>}
                   </div>
-                  <span className="pt-3 text-xl text-gray-500">{pkg}</span>
-                  <span className="font-bold text-black">${index === 0 ? "100" : index === 1 ? "200" : "300"}</span>
+                  <span className="pt-3 text-xl text-gray-500">{service.pricing[pkg]?.name || pkg}</span>
+                  <span className="font-bold text-black">${service.pricing[pkg]?.price || 0}</span>
                 </div>
               ))}
             </div>
-            <p className="text-xl font-semibold text-gray-900">Providing Multiple Services</p>
-            <p className="text-base text-gray-500">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+            <p className="text-xl font-semibold text-gray-900">{service.title}</p>
+            <p className="text-base text-gray-500">
+              {service.pricing[selectedPackage]?.description || "Service package description"}
+            </p>
             <div className="semi-bold mt-4 flex justify-between text-gray-500">
               <span className="flex items-center gap-1 text-base">
                 <MdOutlineWatchLater className="text-2xl" /> Deliver Time:
               </span>
-              <span className="">10 Days</span>
+              <span className="">
+                {service.pricing[selectedPackage]?.deliveryTime
+                  ? `${service.pricing[selectedPackage].deliveryTime} Days`
+                  : "N/A"}
+              </span>
             </div>
             <div className="mt-5 flex flex-col items-center justify-between rounded-xl bg-white p-4 shadow-md">
               <div className="flex flex-col items-center gap-3 space-x-3">
                 <div className="relative">
                   <Image
-                    src="/images/serviceUserProfile.png"
-                    alt="Domenica"
+                    src={service.artist_id.profilePicture}
+                    alt={service.artist_id.name}
                     width={50}
                     height={50}
                     className="rounded-full border-2 border-dashed border-red-400"
@@ -346,7 +423,7 @@ const ServicePage = () => {
                   <span className="absolute right-0 bottom-0 h-3 w-3 rounded-full border border-white bg-green-500"></span>
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-semibold">Domenica</p>
+                  <p className="text-lg font-semibold">{service.artist_id.name}</p>
                   <p className="text-gray-500">Last seen 1hr ago • 09:38 PM</p>
                 </div>
               </div>
@@ -357,9 +434,12 @@ const ServicePage = () => {
                     Message
                   </span>
                 </button>
-                <button className="rounded-full bg-gradient-to-r from-orange-400 to-red-500 px-3 py-2 text-white shadow-md">
-                  Confirm
-                </button>
+                
+                <ConfirmOrderModal
+                  serviceId={service._id}
+                  pricingType={selectedPackage}
+                  deliveryTime={service.pricing[selectedPackage]?.deliveryTime || 0}
+                  location={service.artist_id.location}                />
               </div>
             </div>
           </div>
@@ -378,8 +458,6 @@ const ServicePage = () => {
           </div>
         </section>
       </main>
-      {/* <TopRatedArtists /> */}
-      {/* <ServiziDiTendenzaHome /> */}
     </>
   );
 };

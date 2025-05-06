@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Home from "@/components/main/Home";
 import Image from "next/image";
 import apiClient from "@/lib/interceptor";
@@ -9,9 +9,12 @@ import { useTranslations } from "next-intl";
 import ServiceCard from "@/components/ui/ServiceCard";
 import ArtistCard from "@/components/ui/ArtistCard";
 import { ServiceData } from "../../types/services";
+import { useRouter } from "next/navigation";
 
 const HomePage = () => {
   const [allServices, setAllServices] = useState<ServiceData[]>([]);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const t = useTranslations("HomePage");
   useEffect(() => {
     getServices();
@@ -30,10 +33,11 @@ const HomePage = () => {
       console.error("Submit error:", error);
     }
   };
+
   return (
     <>
       <Home />
-      
+
       <section className="mt-10 space-y-10">
         {/* Artists by Category */}
         <div className="flex flex-col space-y-4">
@@ -68,15 +72,29 @@ const HomePage = () => {
             <p className="text-xl font-bold sm:text-2xl md:text-3xl lg:text-4xl">{t("topTodayServices")}</p>
             {/* Arrow Buttons */}
             <span className="flex items-center gap-4 sm:gap-6">
-              <FaArrowLeft className="size-8 cursor-pointer rounded-full bg-gray-200 p-2 text-gray-600 hover:bg-gray-300 hover:text-gray-900" />
-              <FaArrowRight className="size-8 cursor-pointer rounded-full bg-gray-200 p-2 text-gray-600 hover:bg-gray-300 hover:text-gray-900" />
+              <FaArrowLeft
+                className="size-8 cursor-pointer rounded-full bg-gray-200 p-2 text-gray-600 hover:bg-gray-300 hover:text-gray-900"
+                onClick={() => scrollContainerRef.current?.scrollBy({ left: -300, behavior: "smooth" })}
+              />
+              <FaArrowRight
+                className="size-8 cursor-pointer rounded-full bg-gray-200 p-2 text-gray-600 hover:bg-gray-300 hover:text-gray-900"
+                onClick={() => scrollContainerRef.current?.scrollBy({ left: 300, behavior: "smooth" })}
+              />
             </span>
           </div>
-          <section className="grid grid-cols-2 gap-6 md:gap-8 lg:grid-cols-4">
+
+          {/* Horizontal Scroll Container */}
+          <div ref={scrollContainerRef} className="scrollbar-hide flex gap-6 overflow-x-auto px-2 py-4 sm:px-4 md:px-6">
             {allServices.map((service) => (
-              <ServiceCard key={service._id} service={service} />
+              <div
+                key={service._id}
+                className="min-w-[250px] flex-shrink-0"
+                onClick={() => router.push(`/service/${service._id}`)}
+              >
+                <ServiceCard service={service} />
+              </div>
             ))}
-          </section>
+          </div>
         </div>
         {/* Most Popular Services */}
         <div className="mx-auto w-full space-y-6 px-4 sm:px-6 lg:px-10">
@@ -184,7 +202,6 @@ const HomePage = () => {
           </div>
         </div>
       </section>
-    
     </>
   );
 };

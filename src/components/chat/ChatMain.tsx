@@ -13,7 +13,9 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import MessageInputBox from "./MessageInputBox";
 
-const API_BASE_URL = "http://localhost:5000";
+// API base URL - should be in your env file in a real app
+const API_BASE_URL = "https://twinsting-api-hdr.onrender.com";
+
 
 interface User {
   _id: string;

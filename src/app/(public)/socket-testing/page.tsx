@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import io from "socket.io-client";
 import axios from "axios";
 
-const socket = io("http://localhost:5000");
+const socket = io("https://twinsting-api-hdr.onrender.com");
 type Message = {
   conversationId: string;
   sender: string;
@@ -18,7 +18,7 @@ function Page() {
 
   useEffect(() => {
     // Fetch messages
-    axios.get(`http://localhost:5000/message/getMessagesInChat/${conversationId}`)
+    axios.get(`https://twinsting-api-hdr.onrender.com/message/getMessagesInChat/${conversationId}`)
     .then(res => setMessages(res.data.data));
 
     // Listen for real-time messages
@@ -38,7 +38,7 @@ function Page() {
 
   const handleSend = async () => {
     const msg = { conversationId, sender: userId, text };
-    await axios.post("http://localhost:5000/message/sendMessage", msg);
+    await axios.post("https://twinsting-api-hdr.onrender.com/message/sendMessage", msg);
     socket.emit("sendMessage", msg);
     setText("");
   };

@@ -178,8 +178,8 @@ const CompanyHomepage = () => {
         <section className="my-6 mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {artists.map((artist) => (
             <div key={artist.id} className="flex justify-center">
-              <ArtistCard {...artist} />
-            </div>
+                  <ArtistCard {...artist} id={String(artist.id)} />
+                  </div>
           ))}
         </section>
       </div>

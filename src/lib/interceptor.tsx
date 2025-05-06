@@ -20,6 +20,9 @@ const publicRoutes = [
   "/auth/social-login"
 ];
 
+
+
+
 // Helper function to check if a request URL is for a public route
 const isPublicRoute = (url: string | undefined): boolean => {
   if (!url) return false;

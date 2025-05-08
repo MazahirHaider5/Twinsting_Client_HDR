@@ -41,11 +41,11 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
       <div className="flex items-center justify-between px-4 pb-4 text-sm sm:text-base">
         <span className="flex items-center gap-2 truncate">
           <Image alt="artist" src="/images/ArtistsServicesImg.png" width={30} height={30} className="rounded-full" />
-          <p className="truncate font-semibold">Artist Name</p>
+          <p className="truncate font-semibold text-black">Artist Name</p>
         </span>
-        <span className="flex items-center gap-2">
-          <FaStar className="text-amber-400" />
-          <p className="text-gray-700">0.0</p>
+        <span className="flex items-center gap-2 justify-center">
+          <FaStar className="text-amber-500 w-5 h-5"  />
+          <p className="text-black">0.0</p>
         </span>
       </div>
     </div>

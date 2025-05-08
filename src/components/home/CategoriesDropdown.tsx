@@ -29,7 +29,7 @@ const Dropdown = () => {
       </button>
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute right-0 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg text-gray-800">
           {categories.map((category) => (
             <div
               key={category.name}

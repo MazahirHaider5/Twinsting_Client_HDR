@@ -7,7 +7,7 @@ const TopHeader = () => {
   const [currency, setCurrency] = useState("USD");
 
   return (
-    <div className="flex w-full items-center justify-end gap-2 sm:gap-3 bg-gray-900 px-4 sm:px-6 py-2 text-white">
+    <div className="flex w-full items-center justify-end gap-2 sm:gap-3 bg-[#0E0D11] px-4 sm:px-6 py-2 text-white">
       {/* Currency Dropdown */}
       <select
         value={currency}

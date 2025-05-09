@@ -32,7 +32,7 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
       />
 
       {/* Children Container */}
-      <div className="absolute top-1/2 z-20 -translate-y-1/2 rounded-2xl bg-white left-1/2 -translate-x-1/2 lg:left-auto lg:right-32 lg:translate-x-0">
+      <div className="absolute top-1/2 z-20 -translate-y-1/2 rounded-2xl bg-white left-1/2 -translate-x-1/2 lg:left-auto lg:right-18 lg:translate-x-0">
         {children}
       </div>
     </div>

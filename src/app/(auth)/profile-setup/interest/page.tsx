@@ -8,12 +8,12 @@ import apiClient from "@/lib/interceptor";
 import toast from "react-hot-toast";
 
 const interestOptions = [
-  { name: "Solo", image: "/images/Artists1.png" },
-  { name: "Classical", image: "/images/Artists2.png" },
-  { name: "HipHop", image: "/images/Artists3.png" },
-  { name: "Hostesses", image: "/images/Artists4.png" },
-  { name: "Models", image: "/images/Artists5.png" },
-  { name: "Theater", image: "/images/Artists6.png" }
+  { name: "Solo", image: "/images/Artists3.png" },
+  { name: "Classical", image: "/images/Artists4.png" },
+  { name: "HipHop", image: "/images/Artists1.png" },
+  { name: "Hostesses", image: "/images/Artists6.png" },
+  { name: "Models", image: "/images/Artists7.png" },
+  { name: "Theater", image: "/images/Artists5.png" }
 ];
 
 const Interest = () => {
@@ -47,7 +47,7 @@ const Interest = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-6">
+    <div className="mx-auto flex max-w-2xl flex-col items-center justify-center p-6">
       <h2 className="text-lg font-medium text-gray-500">Profile Completion</h2>
       <h1 className="mt-2 text-center text-xl font-bold md:text-2xl">
         What type of Artist, Dancer, Singer and Etc are you looking for?
@@ -57,8 +57,8 @@ const Interest = () => {
           <div
             key={option.name}
             onClick={() => toggleInterest(option.name)}
-            className={`relative cursor-pointer rounded-lg p-1 ${
-              selectedInterests.includes(option.name) ? "border-4 border-pink-500" : "border border-gray-300"
+            className={`relative cursor-pointer rounded-lg p-1 text-black ${
+              selectedInterests.includes(option.name) ? "border-4 border-pink-500" : ""
             }`}
           >
             <div className="relative aspect-square w-full max-w-[300px]">
@@ -72,14 +72,48 @@ const Interest = () => {
         ))}
       </div>
 
-      <div className="mt-6 flex w-full max-w-md justify-around p-4 md:fixed md:bottom-7">
-        {/* <button className="rounded-full bg-gray-200 px-6 py-2 text-gray-700">Preview</button> */}
-        <button
-          className="rounded-md bg-gradient-to-r from-pink-500 to-orange-400 px-3 py-2 text-white"
-          onClick={handleSubmit}
-        >
-          Save and Continue →
-        </button>
+      <div className="mt-80 flex flex-col items-center w-full space-y-4 md:flex-row md:space-y-0 md:space-x-4 md:justify-center p-4">
+        {/* Preview Button */}
+        <div className="">
+          <button
+            className="flex cursor-pointer w-58 items-center justify-center gap-2 rounded-xl bg-gray-100 px-6 py-3 text-gray-500"
+          >
+            Preview
+          </button>
+        </div>
+
+        {/* Save and Continue Button */}
+        <div className="">
+          <button
+            className="gradient-bg flex cursor-pointer w-58 items-center justify-center gap-2 rounded-xl px-6 py-3 text-white"
+            onClick={handleSubmit}
+          >
+            Save and Continue
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M15.8333 10L4.16658 10"
+                stroke="white"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M10.8333 15L15.8333 10"
+                stroke="white"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M10.8333 5L15.8333 10"
+                stroke="white"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {setupDone && (

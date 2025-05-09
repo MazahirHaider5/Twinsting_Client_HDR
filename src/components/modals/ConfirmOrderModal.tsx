@@ -45,7 +45,7 @@ const ConfirmOrderModal = ({ serviceId, pricingType, deliveryTime, location }: C
     <button
       onClick={handleConfirmOrder}
       disabled={loading}
-      className="rounded-full bg-gradient-to-r from-orange-400 to-red-500 px-3 py-2 text-white shadow-md"
+      className="rounded-full gradient-bg px-10 py-3 text-white text-sm "
     >
       {loading ? "Creating..." : "Confirm"}
     </button>

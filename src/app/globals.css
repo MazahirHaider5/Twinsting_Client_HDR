@@ -5,6 +5,18 @@ body {
   color: oklch(0.278 0.033 256.848);
   font-family: Inter, Arial, Helvetica, sans-serif, "system-ui";
 }
+.gradient-text {
+  background: linear-gradient(to bottom right, #F5AF48, #E32379);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.gradient-bg {
+  background: linear-gradient(to bottom right, #F5AF48, #E32379) !important;
+}
+
+
+
+
 .hide-scrollbar {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* Internet Explorer 10+ */
@@ -22,9 +34,9 @@ body {
   }
 }
 
-.gradient-bg {
+/* .gradient-bg {
   background: linear-gradient(90deg, #f5af48, #ff4e75, #e32379);
-}
+} */
 
 .custom-scrollbar::-webkit-scrollbar {
   width: 2px;

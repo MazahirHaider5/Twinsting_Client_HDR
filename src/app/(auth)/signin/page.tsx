@@ -8,7 +8,6 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import apiClient from "@/lib/interceptor";
-import axios from "axios";
 import toast from "react-hot-toast";
 import { useSelector, useDispatch } from "react-redux";
 import { login } from "@/redux/authSlice";
@@ -25,6 +24,7 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   useEffect(() => {
     if (user?._id && user?.email) {
@@ -32,25 +32,28 @@ const LoginPage = () => {
     }
   }, [user, router]);
 
-  const validateForm = () => {
-    setError(null);
+  const validateForm = (): boolean => {
+    const newErrors: { email?: string; password?: string } = {};
+  
     if (!email.trim()) {
-      setError("Email is required");
-      toast.error("Email is required");
-      return false;
+      newErrors.email = "Email is required";
+    } else if (
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email) || 
+      /\.\./.test(email)
+    ) {
+      newErrors.email = "Invalid email format";
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Invalid email format");
-      toast.error("Invalid email format");
-      return false;
+  
+    if (!password) {
+      newErrors.password = "Password is required";
+    } else if (password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
     }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
-      toast.error("Password must be at least 8 characters long");
-      return false;
-    }
-    return true;
+  
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
+  
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -93,7 +96,7 @@ const LoginPage = () => {
       console.error("Login error:", error);
       const errorMessage = error instanceof Error ? error.message : "Login failed. Please check your credentials.";
       setError(errorMessage);
-      toast.error(errorMessage);
+      // toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -150,53 +153,62 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex h-[90vh] w-[20rem] flex-col items-center justify-center p-8 sm:w-[20rem] md:w-[25rem] lg:w-[30rem] 2xl:w-[35rem]">
-      <p className="mb-2 text-sm font-semibold text-gray-600 sm:text-sm md:text-sm lg:text-base 2xl:text-base">
+    <div className="flex h-full w-full flex-col items-center justify-center p-6 md:p-16 md:h-[93vh] md:w-[25rem] lg:h-[90vh] lg:w-[30rem] 2xl:w-[35rem]">
+      <p className=" text-sm font-semibold text-gray-600">
         {t("loginMain")}
       </p>
-      <p className="mb-8 text-lg font-semibold md:text-lg lg:text-lg 2xl:text-xl">{t("loginTitle")}</p>
+      <p className="mb-4 md:mb-6 text-lg font-extrabold md:text-lg lg:text-lg 2xl:text-xl text-black">{t("loginTitle")}</p>
       <form onSubmit={handleLogin} className="w-full space-y-4">
         {error && <div className="w-full rounded-lg bg-red-50 p-3 text-sm text-red-500">{error}</div>}
         {/* Email Input */}
         <div className="w-full">
-          <label htmlFor="email" className="block px-1 text-xs font-medium sm:text-xs md:text-xs lg:text-base">
+          <label htmlFor="email" className="mb-3 block px-1 text-xs font-medium sm:text-xs md:text-xs lg:text-base">
             {t("email")}
           </label>
-          <section className="flex w-full items-center gap-2 rounded-xl border border-gray-300 bg-gray-100 px-4 py-2.5 text-base sm:text-base md:text-base lg:text-lg 2xl:text-lg">
+          <section className="flex w-full items-center gap-2 rounded-xl border-2 border-gray-200 bg-gray-100 px-4 py-2.5 text-base sm:text-base md:text-base lg:text-lg 2xl:text-lg">
             <HiOutlineMail className="text-sm text-gray-500 sm:text-sm md:text-sm lg:text-lg 2xl:text-lg" />
             <input
               id="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setErrors((prev) => ({ ...prev, email: undefined })); // Clear email error on input
+              }}              
+              // required
               placeholder={t("emailPlaceholder")}
-              className="bg-transparent text-sm outline-none focus:ring-0 sm:text-sm md:text-base lg:text-lg 2xl:text-lg"
+              className="bg-transparent text-sm outline-none focus:ring-0 h-7"
               data-testid="email-input"
             />
           </section>
+          {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
         </div>
         {/* Password Input */}
         <div className="w-full">
-          <label htmlFor="password" className="block px-1 text-xs font-medium sm:text-xs md:text-xs lg:text-base">
+          <label htmlFor="password" className="mb-3 block px-1 text-xs font-medium sm:text-xs md:text-xs lg:text-base">
             {t("password")}
           </label>
-          <section className="flex w-full items-center gap-2 rounded-xl border border-gray-300 bg-gray-100 px-4 py-2.5 text-base sm:text-base md:text-base lg:text-lg 2xl:text-lg">
+          <section className="flex w-full items-center gap-2 rounded-xl border-2 border-gray-200 bg-gray-100 px-4 py-2.5 text-base sm:text-base md:text-base lg:text-lg 2xl:text-lg">
             <HiOutlineLockClosed className="text-sm text-gray-500 sm:text-sm md:text-sm lg:text-lg 2xl:text-lg" />
             <input
               id="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setErrors((prev) => ({ ...prev, password: undefined })); // Clear password error on input
+              }}
+              
+              // required
               placeholder={t("passwordPlaceholder")}
-              className="bg-transparent text-sm outline-none focus:ring-0 sm:text-sm md:text-base lg:text-lg 2xl:text-lg"
+              className="bg-transparent text-sm outline-none focus:ring-0 h-7"
               data-testid="password-input"
             />
           </section>
+          {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
         </div>
         {/* Stay Logged In and Forgot Password */}
-        <div className="flex items-center justify-between py-2">
+        <div className="flex flex-col md:flex-row gap-y-2 items-center justify-between py-2">
           <label
             htmlFor="stayLoggedIn"
             className="flex items-center text-xs sm:text-xs md:text-xs lg:text-base 2xl:text-base"
@@ -204,7 +216,7 @@ const LoginPage = () => {
             <input
               id="stayLoggedIn"
               type="checkbox"
-              className="mr-2 accent-amber-500"
+              className="mr-2 accent-black w-4 h-4"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
               data-testid="remember-me-checkbox"
@@ -213,7 +225,7 @@ const LoginPage = () => {
           </label>
           <Link
             href="/forgot-password"
-            className="flex items-center text-xs hover:underline sm:text-xs md:text-xs lg:text-base 2xl:text-base"
+            className="underline flex items-center text-xs hover:underline sm:text-xs md:text-xs lg:text-base 2xl:text-base text-black"
           >
             {t("forgotPassword")}
           </Link>
@@ -221,21 +233,21 @@ const LoginPage = () => {
         {/* Submit Button */}
         <button
           type="submit"
-          className="gradient w-full cursor-pointer rounded-xl py-2.5 text-xs text-white hover:opacity-90 focus:outline-none disabled:opacity-50 sm:text-xs md:text-xs lg:text-base 2xl:text-base"
+          className="gradient-bg w-full cursor-pointer rounded-xl py-2.5 text-xs text-white hover:opacity-90 focus:outline-none disabled:opacity-50 sm:text-xs md:text-xs lg:text-base 2xl:text-base font-bold"
           disabled={loading}
           data-testid="login-button"
         >
           {loading ? "Logging In..." : t("loginButton")}
         </button>
         {/* Social Login Buttons */}
-        <div className="pt-4">
-          <p className="mb-4 text-center text-xs text-gray-600 sm:text-xs md:text-xs lg:text-base 2xl:text-base">
+        <div className="pt-1">
+          <p className="mb-4 text-center text-sm text-gray-600 ">
             {t("loginWith")}
           </p>
           <div className="space-y-2">
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-4 rounded-xl border border-gray-300 bg-gray-100 py-2.5 pl-4 text-xs hover:opacity-90 sm:text-xs md:text-xs lg:text-base 2xl:text-base"
+              className="flex w-full items-center justify-center gap-4 rounded-xl border-2 border-gray-200 bg-gray-100 py-2.5 pl-4 text-xs hover:opacity-90 sm:text-xs md:text-xs lg:text-base 2xl:text-base text-black"
               onClick={() => handleSocialLogin("google")}
               disabled={loading}
               data-testid="google-login-button"
@@ -245,7 +257,7 @@ const LoginPage = () => {
             </button>
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-4 rounded-xl border border-gray-300 bg-gray-100 py-2.5 pl-4 text-xs hover:opacity-90 sm:text-xs md:text-xs lg:text-base 2xl:text-base"
+              className="flex w-full items-center justify-center gap-4 rounded-xl border-2 border-gray-200 bg-gray-100 py-2.5 pl-4 text-xs hover:opacity-90 sm:text-xs md:text-xs lg:text-base 2xl:text-base text-black"
               onClick={() => handleSocialLogin("apple")}
               disabled={loading}
               data-testid="apple-login-button"
@@ -255,7 +267,7 @@ const LoginPage = () => {
             </button>
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-4 rounded-xl border border-gray-300 bg-gray-100 py-2.5 pl-4 text-xs hover:opacity-90 sm:text-xs md:text-xs lg:text-base 2xl:text-base"
+              className="flex w-full items-center justify-center gap-4 rounded-xl border-2 border-gray-200 bg-gray-100 py-2.5 pl-4 text-xs hover:opacity-90 sm:text-xs md:text-xs lg:text-base 2xl:text-base text-black"
               onClick={() => handleSocialLogin("facebook")}
               disabled={loading}
               data-testid="facebook-login-button"
@@ -265,9 +277,9 @@ const LoginPage = () => {
             </button>
           </div>
         </div>
-        <p className="pt-2 text-center text-gray-600">
+        <p className="pt-2 text-center text-gray-800 text-sm">
           {t("dontHaveAccount")}{" "}
-          <Link href="/signup" className="text-orange-500 hover:underline">
+          <Link href="/signup" className="text-[#E94A6C] underline">
             {t("register")}
           </Link>
         </p>
